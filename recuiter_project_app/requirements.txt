@@ -1,7 +1,6 @@
 setuptools
 wheel
 build
-
 langgraph==0.6.5
 streamlit==1.44.0
 python-dotenv==1.1.0
@@ -9,7 +8,7 @@ pandas==2.2.2
 google-generativeai==0.8.5
 openai==1.75.0
 pydantic==2.11.4
-pdfplumber==0.11.6
+pdfplumber==0.10.0
 google-auth==2.34.0
 google-auth-oauthlib==1.2.2
-google-api-python-client==2.179.0
+google-api-python-client==2.79.0
