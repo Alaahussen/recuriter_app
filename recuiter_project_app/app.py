@@ -645,7 +645,7 @@ class ATSApp:
                     st.error(f"حدث خطأ أثناء محاولة تسجيل الدخول: {e}")
                     return False
         
-        st.info("اضغط على زر 'تسجيل الدخول باستخدام Google' أعلاه للمتابعة."
+        st.info("اضغط على زر 'تسجيل الدخول باستخدام Google' أعلاه للمتابعة.")
         return False
     def add_logout_button(self):
         """Add a logout button to clear authentication"""
@@ -999,6 +999,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
