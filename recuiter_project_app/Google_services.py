@@ -117,12 +117,13 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
         sheets = build('sheets', 'v4', credentials=creds)
         forms = build('forms', 'v1', credentials=creds)
         
-        st.sidebar.success("✅ Google services initialized")
+        #st.sidebar.success("✅ Google services initialized")
         return gmail, calendar, drive, sheets, forms
         
     except Exception as e:
         st.error(f"❌ Failed to initialize Google services: {str(e)}")
         st.stop()
+
 
 
 
