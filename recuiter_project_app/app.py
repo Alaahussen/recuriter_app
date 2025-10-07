@@ -2,7 +2,7 @@
 __import__('pysqlite3')
 import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-import streamlit as st
+import streamli as st
 import os
 import json
 import pandas as pd
@@ -601,33 +601,32 @@ class ATSApp:
             st.metric("Rejected", rejected)
         with col4:
             st.metric("Tests Completed", tested)
-    import streamlit as st
 
-def ensure_google_auth():
-    """Ensure the user is authenticated with Google."""
-    token_path = "token.json"
-
-    # If token exists, assume login
-    if os.path.exists(token_path):
-        st.sidebar.success("✅ تم تسجيل الدخول إلى Google بالفعل")
-        return True
-
-    # If no token yet, show login button
-    st.subheader("🔐 تسجيل الدخول باستخدام Google للوصول إلى خدمات Drive, Sheets, Forms, Calendar")
-    if st.button("تسجيل الدخول باستخدام Google"):
-        try:
-            gmail, calendar, drive, sheets, forms = google_services()
-            st.success("✅ تم تسجيل الدخول بنجاح!")
+    def ensure_google_auth(self):
+        """Ensure the user is authenticated with Google."""
+        token_path = "token.json"
+    
+        # If token exists, assume login
+        if os.path.exists(token_path):
+            st.sidebar.success("✅ تم تسجيل الدخول إلى Google بالفعل")
             return True
-        except FileNotFoundError:
-            st.error("⚠️ يرجى رفع ملف client_secret.json أولاً لتفعيل الدخول.")
+    
+        # If no token yet, show login button
+        st.subheader("🔐 تسجيل الدخول باستخدام Google للوصول إلى خدمات Drive, Sheets, Forms, Calendar")
+        if st.button("تسجيل الدخول باستخدام Google"):
+            try:
+                gmail, calendar, drive, sheets, forms = google_services()
+                st.success("✅ تم تسجيل الدخول بنجاح!")
+                return True
+            except FileNotFoundError:
+                st.error("⚠️ يرجى رفع ملف client_secret.json أولاً لتفعيل الدخول.")
+                st.stop()
+            except Exception as e:
+                st.error(f"حدث خطأ أثناء محاولة تسجيل الدخول: {e}")
+                st.stop()
+        else:
+            st.info("اضغط على الزر أعلاه لتسجيل الدخول.")
             st.stop()
-        except Exception as e:
-            st.error(f"حدث خطأ أثناء محاولة تسجيل الدخول: {e}")
-            st.stop()
-    else:
-        st.info("اضغط على الزر أعلاه لتسجيل الدخول.")
-        st.stop()
         
     
     def display_candidate_details(self, candidate: Candidate):
@@ -732,7 +731,7 @@ def main():
         st.write("قم بإعداد الاتصال بالنظام قبل البدء في متابعة عملية التوظيف")
 
         with st.form("home_form"):
-            creds = ensure_google_auth()
+            creds = app.ensure_google_auth()
             if not creds:
                 st.warning("⚠️ يرجى تسجيل الدخول بحساب Google أولاً للمتابعة.")
                 st.stop()
@@ -949,6 +948,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
