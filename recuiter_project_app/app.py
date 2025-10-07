@@ -1,3 +1,4 @@
+# streamlit_app.py
 __import__('pysqlite3')
 import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
@@ -83,7 +84,7 @@ class ATSApp:
         self.drive_folder_id = None
         self.send_tests_enabled = True  # default
         
-        # Initialize session state - لا نحفظ بيانات الاعتماد
+        # Initialize session state
         if 'candidates' not in st.session_state:
             st.session_state.candidates = []
         if 'selected_candidate_index' not in st.session_state:
@@ -100,10 +101,6 @@ class ATSApp:
             st.session_state.job_cities = []
         if 'regenerate_questions' not in st.session_state:
             st.session_state.regenerate_questions = "استخدام الأسئلة الموجودة (لا إنشاء جديد)"
-        if 'current_page' not in st.session_state:
-            st.session_state.current_page = "login"
-        if 'user_authenticated' not in st.session_state:
-            st.session_state.user_authenticated = False
     
     def normalize_city_name(self, city: str) -> str:
         """Normalize city names for better matching"""
@@ -607,77 +604,62 @@ class ATSApp:
 
     def ensure_google_auth(self):
         """Ensure the user is authenticated with Google."""
-        # إزالة أي بيانات محفوظة مسبقاً
         token_path = "token.json"
-        if os.path.exists(token_path):
-            os.remove(token_path)
         
-        # التحقق من حالة المصادقة الحالية
-        if st.session_state.get('user_authenticated'):
+        # Check if already authenticated in session
+        if st.session_state.get('google_authenticated'):
+            st.sidebar.success("✅ تم تسجيل الدخول إلى Google بالفعل")
             return True
         
-        # إذا لم يكن المستخدم مصادقاً، عرض صفحة تسجيل الدخول
-        st.session_state.current_page = "login"
-        return False
-
-    def login_page(self):
-        """Display login page"""
-        st.markdown('<h1 class="main-header">🔐 تسجيل الدخول</h1>', unsafe_allow_html=True)
-        
-        st.info("""
-        **مرحباً بك في نظام التوظيف الذكي**
-        
-        يرجى تسجيل الدخول باستخدام حساب Google للمتابعة إلى لوحة التحكم.
-        """)
-        
-        col1, col2, col3 = st.columns([1,2,1])
-        with col2:
-            with st.form("login_form"):
-                st.subheader("تسجيل الدخول إلى النظام")
-                
-                if st.form_submit_button("🚀 تسجيل الدخول باستخدام Google", use_container_width=True):
-                    try:
-                        # محاولة تسجيل الدخول
-                        services = google_services()
-                        if services:
-                            st.session_state.user_authenticated = True
-                            st.session_state.current_page = "home"
-                            st.session_state.google_services = services
-                            st.success("✅ تم تسجيل الدخول بنجاح!")
-                            st.rerun()
-                        else:
-                            st.error("❌ فشل في تسجيل الدخول. يرجى المحاولة مرة أخرى.")
-                    except FileNotFoundError:
-                        st.error("""
-                        ⚠️ لم يتم العثور على ملف الاعتماد (client_secret.json)
-                        
-                        يرجى التأكد من:
-                        1. وجود ملف client_secret.json في المجلد الرئيسي
-                        2. أن الملف صالح ومرتبط بحساب Google Cloud Platform
-                        """)
-                    except Exception as e:
-                        st.error(f"❌ حدث خطأ أثناء تسجيل الدخول: {str(e)}")
-
-    def logout(self):
-        """Logout user and clear all data"""
-        # حذف ملف التوكن
-        token_path = "token.json"
+        # If token exists, assume login
         if os.path.exists(token_path):
-            os.remove(token_path)
+            try:
+                # Set session state to mark as authenticated
+                st.session_state.google_authenticated = True
+                st.sidebar.success("✅ تم تسجيل الدخول إلى Google بالفعل")
+                return True
+            except:
+                # If token is invalid, remove it
+                if os.path.exists(token_path):
+                    os.remove(token_path)
         
-        # مسح جميع بيانات الجلسة
-        keys_to_clear = [
-            'user_authenticated', 'google_services', 'google_authenticated',
-            'candidates', 'current_page', 'HR_FROM_EMAIL', 'FORM_ID', 
-            'API_KEY', 'MODEL_TYPE', 'JOB_ID', 'JOB_CITY', 'JOB_REQUIREMENTS'
-        ]
+        # If no token yet, show login button
+        st.subheader("🔐 تسجيل الدخول باستخدام Google للوصول إلى خدمات Drive, Sheets, Forms, Calendar")
         
-        for key in keys_to_clear:
-            if key in st.session_state:
-                del st.session_state[key]
+        # Use a form for the login button
+        with st.form("google_login_form"):
+            login_submitted = st.form_submit_button("تسجيل الدخول باستخدام Google")
+            
+            if login_submitted:
+                try:
+                    gmail, calendar, drive, sheets, forms = google_services()
+                    # Mark as authenticated in session state
+                    st.session_state.google_authenticated = True
+                    st.success("✅ تم تسجيل الدخول بنجاح!")
+                    st.rerun()
+                    return True
+                except FileNotFoundError:
+                    st.error("⚠️ يرجى رفع ملف client_secret.json أولاً لتفعيل الدخول.")
+                    return False
+                except Exception as e:
+                    st.error(f"حدث خطأ أثناء محاولة تسجيل الدخول: {e}")
+                    return False
         
-        # إعادة التعيين إلى صفحة تسجيل الدخول
-        st.session_state.current_page = "login"
+        st.info("اضغط على زر 'تسجيل الدخول باستخدام Google' أعلاه للمتابعة.")
+        return False
+    def add_logout_button(self):
+        """Add a logout button to clear authentication"""
+        if st.sidebar.button("🚪 Logout"):
+            # Clear session state
+            if 'google_creds' in st.session_state:
+                del st.session_state.google_creds
+            
+            # Clear token file
+            if os.path.exists("token.json"):
+                os.remove("token.json")
+            
+            st.success("Logged out successfully!")
+            st.rerun()
 
     def display_candidate_details(self, candidate: Candidate):
         candidate_folder_id = self.get_candidate_folder_id(candidate)
@@ -768,30 +750,36 @@ class ATSApp:
 
 
 def main():
-    # Initialize app
+    st.sidebar.title("📋 نظام التوظيف الذكي")
+    page = st.sidebar.radio("اختر الصفحة", ["🏠 الصفحة الرئيسية", "📊 لوحة التحكم"])
+    
     if "app_instance" not in st.session_state:
         st.session_state.app_instance = ATSApp()
     app = st.session_state.app_instance
     
-    # Check authentication and redirect to login if not authenticated
-    if not st.session_state.get('user_authenticated', False):
-        app.login_page()
+    # Add logout button in sidebar (only show when authenticated)
+    if st.session_state.get('google_authenticated', False):
+        if st.sidebar.button("🚪 تسجيل الخروج", type="secondary"):
+            # Clear all authentication data
+            if 'google_creds' in st.session_state:
+                del st.session_state.google_creds
+            if 'google_authenticated' in st.session_state:
+                del st.session_state.google_authenticated
+            
+            # Remove token file
+            if os.path.exists("token.json"):
+                os.remove("token.json")
+            
+            # Clear any other Google-related session state
+            for key in list(st.session_state.keys()):
+                if 'google' in key.lower() or 'auth' in key.lower():
+                    del st.session_state[key]
+            
+            st.success("✅ تم تسجيل الخروج بنجاح!")
+            st.rerun()
+    
+    if not app.ensure_google_auth():
         return
-    
-    # Main application navigation for authenticated users
-    st.sidebar.title("📋 نظام التوظيف الذكي")
-    
-    # إضافة زر تسجيل الخروج في الشريط الجانبي
-    if st.sidebar.button("🚪 تسجيل الخروج", type="secondary", use_container_width=True):
-        app.logout()
-        st.rerun()
-    
-    # صفحة التنقل الرئيسية
-    page = st.sidebar.radio("اختر الصفحة", ["🏠 الصفحة الرئيسية", "📊 لوحة التحكم"])
-    
-    # تحديث حالة الصفحة الحالية
-    st.session_state.current_page = "home" if page == "🏠 الصفحة الرئيسية" else "dashboard"
-
     # --- الصفحة الرئيسية ---
     if page == "🏠 الصفحة الرئيسية":
         st.markdown('<h1 class="main-header">🏠 الصفحة الرئيسية</h1>', unsafe_allow_html=True)
@@ -1009,6 +997,21 @@ def main():
 
 
 if __name__ == "__main__":
+
     main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
