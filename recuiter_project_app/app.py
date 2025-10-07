@@ -727,12 +727,12 @@ def main():
                     st.error("❌ يرجى إدخال مفتاح الـ API.")
                 else:
                     # حفظ ملف الاعتماد
-                    creds_path = os.path.join(os.getcwd(), "credentials.json")
-                    with open(creds_path, "wb") as f:
-                        f.write(uploaded_file.getbuffer())
+                    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+                        tmp_file.write(uploaded_file.read())
+                        tmp_path = tmp_file.name
 
                     # حفظ القيم في البيئة والجلسة
-                    save_to_env("CREDENTIALS_PATH", creds_path)
+                    save_to_env("CREDENTIALS_PATH", tmp_path)
                     save_to_env("FORM_ID", form_id) 
                     save_to_env("MODEL_TYPE", model_choice)
                     if model_choice=="Gemini":
@@ -930,3 +930,4 @@ def main():
 if __name__ == "__main__":
 
     main()
+
