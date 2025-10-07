@@ -759,7 +759,7 @@ def main():
     
     # Add logout button in sidebar (only show when authenticated)
     if st.session_state.get('google_authenticated', False):
-        if st.sidebar.button("🚪 تسجيل الخروج", type="secondary")
+        if st.sidebar.button("🚪 تسجيل الخروج", type="secondary"):
             # Clear all authentication data
             if 'google_creds' in st.session_state:
                 del st.session_state.google_creds
@@ -999,6 +999,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
