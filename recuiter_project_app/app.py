@@ -653,10 +653,9 @@ class ATSApp:
                         gmail, calendar, drive, sheets, forms = google_services()
                         # Mark as authenticated in session state
                         st.session_state.google_authenticated = True
-                        st.session_state.current_page = "main"
                         st.success("✅ تم تسجيل الدخول بنجاح!")
+                        # Force immediate rerun to show main app
                         st.rerun()
-                        return True
                 except FileNotFoundError:
                     st.error("""
                     ⚠️ لم يتم العثور على ملف الإعدادات
@@ -791,12 +790,13 @@ def main():
         st.session_state.app_instance = ATSApp()
     app = st.session_state.app_instance
     
-    # Check if user is authenticated
+    # Check if user is authenticated - SIMPLIFIED LOGIC
     if not st.session_state.get('google_authenticated'):
+        # Show login page only
         app.ensure_google_auth()
-        return
+        st.stop()  # Important: Stop execution here if not authenticated
     
-    # Main application after authentication
+    # If we reach here, user is authenticated - show main app
     st.sidebar.title("📋 نظام التوظيف الذكي")
     
     # Add logout button in sidebar
@@ -813,224 +813,230 @@ def main():
         st.success("✅ تم تسجيل الخروج بنجاح!")
         st.rerun()
     
+    # Show main navigation
     page = st.sidebar.radio("اختر الصفحة", ["🏠 الصفحة الرئيسية", "📊 لوحة التحكم"])
     
     # --- الصفحة الرئيسية ---
     if page == "🏠 الصفحة الرئيسية":
-        st.markdown('<h1 class="main-header">🏠 الصفحة الرئيسية</h1>', unsafe_allow_html=True)
-        st.write("قم بإعداد الاتصال بالنظام قبل البدء في متابعة عملية التوظيف")
-
-        with st.form("home_form"):
-            st.subheader("📧 بيانات الموارد البشرية")
-            hr_email = st.text_input("بريد الموارد البشرية (HR Email)", value=os.getenv("HR_FROM_EMAIL", ""))
-            form_id = st.text_input("معرف نموذج Google Form", value=os.getenv("FORM_ID", ""))
-
-            st.subheader("🤖 إعداد الذكاء الاصطناعي")
-            model_choice = st.selectbox("اختر نموذج الذكاء الاصطناعي:", ["Gemini", "OpenAI"])
-            api_key = st.text_input("API Key", type="password", value=os.getenv("API_KEY", ""))
-            
-
-            submitted = st.form_submit_button("➡️ متابعة إلى لوحة التحكم")
-
-            if submitted:
-                if not hr_email or not form_id:
-                    st.error("❌ يرجى إدخال بريد الموارد البشرية ومعرف النموذج.")
-                elif not api_key:
-                    st.error("❌ يرجى إدخال مفتاح الـ API.")
-                else:
-                    # حفظ ملف الاعتماد
-                    save_to_env("FORM_ID", form_id) 
-                    save_to_env("MODEL_TYPE", model_choice)
-                    if model_choice=="Gemini":
-                        save_to_env("GEMINI_API_KEY", api_key)
-                    else:
-                        save_to_env("OPENAI_API_KEY", api_key)
-                    os.environ["HR_FROM_EMAIL"] = hr_email
-                    os.environ["FORM_ID"] = form_id
-                    os.environ["API_KEY"] = api_key
-                    os.environ["MODEL_TYPE"] = model_choice
-
-                    st.session_state["HR_FROM_EMAIL"] = hr_email
-                    st.session_state["FORM_ID"] = form_id
-                    st.session_state["API_KEY"] = api_key
-                    st.session_state["MODEL_TYPE"] = model_choice
-
-                    st.success("✅ تم حفظ البيانات بنجاح! يمكنك الانتقال إلى لوحة التحكم من الشريط الجانبي.")
-                    st.balloons()
-
+        show_home_page(app)
+    
     # --- لوحة التحكم ---
     elif page == "📊 لوحة التحكم":
-        st.markdown('<h1 class="main-header">📊 لوحة متابعة التوظيف</h1>', unsafe_allow_html=True)
+        show_dashboard_page(app)
 
-        # التحقق من وجود الإعدادات الأساسية
-        required_keys = ["HR_FROM_EMAIL", "FORM_ID", "API_KEY", "MODEL_TYPE"]
-        if any(key not in st.session_state for key in required_keys):
-            st.warning("⚠️ يرجى إدخال البيانات في الصفحة الرئيسية أولاً قبل الانتقال إلى لوحة التحكم.")
-            st.stop()
+def show_home_page(app):
+    """Display the home page"""
+    st.markdown('<h1 class="main-header">🏠 الصفحة الرئيسية</h1>', unsafe_allow_html=True)
+    st.write("قم بإعداد الاتصال بالنظام قبل البدء في متابعة عملية التوظيف")
 
-        with st.sidebar:
-            st.header("⚙️ إعدادات الوظيفة")  
-            with st.form("config_form"):
-                st.subheader("📄 تفاصيل الوظيفة")
-                job_id = st.text_input("معرف الوظيفة", value=os.getenv("JOB_ID", ""))
+    with st.form("home_form"):
+        st.subheader("📧 بيانات الموارد البشرية")
+        hr_email = st.text_input("بريد الموارد البشرية (HR Email)", value=os.getenv("HR_FROM_EMAIL", ""))
+        form_id = st.text_input("معرف نموذج Google Form", value=os.getenv("FORM_ID", ""))
 
-                enable_city_filter = st.checkbox(
-                    "تفعيل تصفية المدن", 
-                    value=st.session_state.get('enable_city_filter', True),
-                    help="عند التفعيل، سيتم عرض المرشحين من المدن المحددة فقط"
-                )
-                st.session_state.enable_city_filter = enable_city_filter
+        st.subheader("🤖 إعداد الذكاء الاصطناعي")
+        model_choice = st.selectbox("اختر نموذج الذكاء الاصطناعي:", ["Gemini", "OpenAI"])
+        api_key = st.text_input("API Key", type="password", value=os.getenv("API_KEY", ""))
 
-                base_cities = ["مكة", "المدينة", "الرياض", "جدة", "الدمام", "الطائف"]
-                current_job_cities = st.session_state.get('job_cities', [])
-                all_city_options = list(set(base_cities + current_job_cities))
+        submitted = st.form_submit_button("➡️ متابعة إلى لوحة التحكم")
 
-                job_cities = st.multiselect(
-                    "🏙️ المدن المطلوبة",
-                    all_city_options,
-                    default=current_job_cities
-                )
-                new_city = st.text_input("➕ أضف مدينة جديدة (اختياري):")
-                job_requirements = st.text_area("🧾 متطلبات الوظيفة", value=os.getenv("JOB_REQUIREMENTS", ""), height=100)
-
-                st.subheader("🧠 خيارات الاختبار")
-                send_tests_enabled = st.radio("هل تريد إرسال اختبارات للمرشحين؟", ["نعم", "لا"], index=0)
-                app.send_tests_enabled = True if send_tests_enabled == "نعم" else False
-
-                st.subheader("📈 حدود التقييم")
-                interview_threshold = st.slider("الحد الأدنى للمقابلة", 0, 100, int(os.getenv("INTERVIEW_THRESHOLD", 70)))
-                evaluation_mode = st.selectbox(
-                    "طريقة التقييم:",
-                    ["تقييم السيرة الذاتية فقط", "تقييم السيرة الذاتية والاختبار"],
-                    index=0 if os.getenv("EVALUATION_MODE", "cv_only") == "cv_only" else 1
-                )
-                
-                if new_city and new_city.strip() and new_city.strip() not in job_cities:
-                    job_cities.append(new_city.strip())
-                st.session_state.job_cities = job_cities
-         
-                if st.form_submit_button("🚀 تشغيل البرنامج"):
-                    # التحقق من الحقول المطلوبة
-                    if not job_id:
-                        st.error("❌ يرجى إدخال معرف الوظيفة")
-                        st.stop()
-                    
-                    # تخزين المدن في حالة الجلسة
-                    st.session_state.job_cities = job_cities
-                    
-                    # حفظ في البيئة وحالة الجلسة
-                    save_to_env("JOB_ID", job_id) 
-                    save_to_env("JOB_CITY", json.dumps(job_cities, ensure_ascii=False)) 
-                    save_to_env("JOB_REQUIREMENTS", job_requirements)
-                    save_to_env("INTERVIEW_THRESHOLD", str(interview_threshold))
-                    #save_to_env("HR_FROM_EMAIL", hr_email)
-
-                    # تعيين متغيرات البيئة فوراً
-                    os.environ["JOB_ID"] = job_id
-                    os.environ["JOB_CITY"] = json.dumps(job_cities, ensure_ascii=False)
-                    os.environ["JOB_REQUIREMENTS"] = job_requirements
-                    os.environ["EVALUATION_MODE"] = "cv_only" if evaluation_mode == "تقييم السيرة الذاتية فقط" else "cv_and_test"
-                    os.environ["INTERVIEW_THRESHOLD"] = str(interview_threshold)
-                    #os.environ["HR_FROM_EMAIL"] = hr_email
-                    
-                    # تحديث حالة الجلسة
-                    st.session_state["JOB_ID"] = job_id
-                    st.session_state["JOB_CITY"] = job_cities
-                    st.session_state["JOB_REQUIREMENTS"] = job_requirements
-                    #st.session_state["HR_FROM_EMAIL"] = hr_email
-
-                    load_dotenv(override=True)
-                    
-                    job_config = {
-                        "JOB_ID": job_id,
-                        "JOB_CITY": json.dumps(job_cities, ensure_ascii=False),
-                        "JOB_REQUIREMENTS": job_requirements,
-                        "FORM_ID": os.getenv("FORM_ID", ""),
-                        "INTERVIEW_THRESHOLD": str(interview_threshold),
-                        "EVALUATION_MODE": "cv_only" if evaluation_mode == "تقييم السيرة الذاتية فقط" else "cv_and_test"
-                    }
-
-                    with st.spinner("جاري تشغيل خط التوظيف..."):
-                        success = app.run_pipeline(job_config)
-                        if success:
-                            st.success("تم تنفيذ خط التوظيف بنجاح ✅")
-                        else:
-                            st.error("فشل تشغيل خط التوظيف ❌")
-            
-            # زر تحديث قائمة المرشحين
-            if st.button("🔄 تحديث قائمة المرشحين"):
-                services = app.get_google_services()
-                if services:
-                    candidates = app.get_candidates_from_sheet()
-                    if candidates:
-                        st.session_state.candidates = candidates
-                        st.success(f"تم تحديث {len(candidates)} مرشح")
-                    else:
-                        st.warning("لم يتم العثور على مرشحين أو فشل تحميل البيانات")
+        if submitted:
+            if not hr_email or not form_id:
+                st.error("❌ يرجى إدخال بريد الموارد البشرية ومعرف النموذج.")
+            elif not api_key:
+                st.error("❌ يرجى إدخال مفتاح الـ API.")
+            else:
+                # حفظ ملف الاعتماد
+                save_to_env("FORM_ID", form_id) 
+                save_to_env("MODEL_TYPE", model_choice)
+                if model_choice=="Gemini":
+                    save_to_env("GEMINI_API_KEY", api_key)
                 else:
-                    st.error("فشل في تهيئة خدمات Google")
-        
-        # تبويبات لوحة التحكم
-        tab1, tab2 = st.tabs(["📈 لوحة التحكم", "👥 إدارة المرشحين"])
-        
-        # الحصول على جميع المرشحين
-        all_candidates = st.session_state.get('candidates', [])
-        
-        # تطبيق تصفية المدن إذا كانت مفعلة
-        if st.session_state.enable_city_filter and st.session_state.job_cities:
-            filtered_candidates = app.filter_candidates_by_city(all_candidates, st.session_state.job_cities)
-            st.info(f"📍 تم تصفية المدن: {', '.join(st.session_state.job_cities)} - ({len(filtered_candidates)} من أصل {len(all_candidates)} مرشح)")
-        else:
-            filtered_candidates = all_candidates
-            if st.session_state.enable_city_filter:
-                st.info("📍 عرض جميع المرشحين (لم يتم تحديد مدن للتصفية)")
-            else:
-                st.info("📍 عرض جميع المرشحين (التصفية معطلة)")
+                    save_to_env("OPENAI_API_KEY", api_key)
+                os.environ["HR_FROM_EMAIL"] = hr_email
+                os.environ["FORM_ID"] = form_id
+                os.environ["API_KEY"] = api_key
+                os.environ["MODEL_TYPE"] = model_choice
 
-        with tab1:
-            st.header("نظرة عامة على خط التوظيف")
-            if filtered_candidates:
-                app.display_metrics(filtered_candidates)
-                st.subheader("📅 حالة المرشحين")
-                status_data = []
-                for candidate in filtered_candidates:
-                    status_data.append({
-                        "المرشح": candidate.name or candidate.email,
-                        "المدينة": candidate.city or "غير معروف",
-                        "الحالة": candidate.status,
-                        "تقييم السيرة الذاتية": candidate.cv_score or 0,
-                        "تقييم الاختبار": candidate.test_score or 0,
-                        "التقييم الكلي": candidate.overall_score or 0
-                    })
-                if status_data:
-                    df = pd.DataFrame(status_data)
-                    st.dataframe(df, use_container_width=True)
-                    
-                    # Show filtering summary
-                    if len(filtered_candidates) != len(all_candidates):
-                        st.info(f"💡 يتم عرض {len(filtered_candidates)} مرشح من أصل {len(all_candidates)} بعد التصفية")
-            else:
-                st.info("لا يوجد مرشحين. قم بتشغيل الخط أو التحديث.")
+                st.session_state["HR_FROM_EMAIL"] = hr_email
+                st.session_state["FORM_ID"] = form_id
+                st.session_state["API_KEY"] = api_key
+                st.session_state["MODEL_TYPE"] = model_choice
 
-        with tab2:
-            st.header("إدارة المرشحين")
-            if filtered_candidates:
-                candidate_options = [f"{c.name or 'غير معروف'} ({c.email}) - {c.city or 'غير معروف'}" for c in filtered_candidates]
-                selected_index = st.selectbox(
-                    "اختر مرشح:",
-                    range(len(filtered_candidates)),
-                    index=st.session_state.selected_candidate_index,
-                    format_func=lambda x: candidate_options[x]
-                )
-                st.session_state.selected_candidate_index = selected_index
-                if selected_index is not None:
-                    selected_candidate = filtered_candidates[selected_index]
-                    app.display_candidate_details(selected_candidate)
+                st.success("✅ تم حفظ البيانات بنجاح! يمكنك الانتقال إلى لوحة التحكم من الشريط الجانبي.")
+                st.balloons()
+
+def show_dashboard_page(app):
+    """Display the dashboard page"""
+    st.markdown('<h1 class="main-header">📊 لوحة متابعة التوظيف</h1>', unsafe_allow_html=True)
+
+    # التحقق من وجود الإعدادات الأساسية
+    required_keys = ["HR_FROM_EMAIL", "FORM_ID", "API_KEY", "MODEL_TYPE"]
+    if any(key not in st.session_state for key in required_keys):
+        st.warning("⚠️ يرجى إدخال البيانات في الصفحة الرئيسية أولاً قبل الانتقال إلى لوحة التحكم.")
+        st.stop()
+
+    with st.sidebar:
+        st.header("⚙️ إعدادات الوظيفة")  
+        with st.form("config_form"):
+            st.subheader("📄 تفاصيل الوظيفة")
+            job_id = st.text_input("معرف الوظيفة", value=os.getenv("JOB_ID", ""))
+
+            enable_city_filter = st.checkbox(
+                "تفعيل تصفية المدن", 
+                value=st.session_state.get('enable_city_filter', True),
+                help="عند التفعيل، سيتم عرض المرشحين من المدن المحددة فقط"
+            )
+            st.session_state.enable_city_filter = enable_city_filter
+
+            base_cities = ["مكة", "المدينة", "الرياض", "جدة", "الدمام", "الطائف"]
+            current_job_cities = st.session_state.get('job_cities', [])
+            all_city_options = list(set(base_cities + current_job_cities))
+
+            job_cities = st.multiselect(
+                "🏙️ المدن المطلوبة",
+                all_city_options,
+                default=current_job_cities
+            )
+            new_city = st.text_input("➕ أضف مدينة جديدة (اختياري):")
+            job_requirements = st.text_area("🧾 متطلبات الوظيفة", value=os.getenv("JOB_REQUIREMENTS", ""), height=100)
+
+            st.subheader("🧠 خيارات الاختبار")
+            send_tests_enabled = st.radio("هل تريد إرسال اختبارات للمرشحين؟", ["نعم", "لا"], index=0)
+            app.send_tests_enabled = True if send_tests_enabled == "نعم" else False
+
+            st.subheader("📈 حدود التقييم")
+            interview_threshold = st.slider("الحد الأدنى للمقابلة", 0, 100, int(os.getenv("INTERVIEW_THRESHOLD", 70)))
+            evaluation_mode = st.selectbox(
+                "طريقة التقييم:",
+                ["تقييم السيرة الذاتية فقط", "تقييم السيرة الذاتية والاختبار"],
+                index=0 if os.getenv("EVALUATION_MODE", "cv_only") == "cv_only" else 1
+            )
+            
+            if new_city and new_city.strip() and new_city.strip() not in job_cities:
+                job_cities.append(new_city.strip())
+            st.session_state.job_cities = job_cities
+     
+            if st.form_submit_button("🚀 تشغيل البرنامج"):
+                # التحقق من الحقول المطلوبة
+                if not job_id:
+                    st.error("❌ يرجى إدخال معرف الوظيفة")
+                    st.stop()
                 
-            else:    
-                st.info("لا يوجد مرشحين. قم بتشغيل الخط أو التحديث.")
+                # تخزين المدن في حالة الجلسة
+                st.session_state.job_cities = job_cities
+                
+                # حفظ في البيئة وحالة الجلسة
+                save_to_env("JOB_ID", job_id) 
+                save_to_env("JOB_CITY", json.dumps(job_cities, ensure_ascii=False)) 
+                save_to_env("JOB_REQUIREMENTS", job_requirements)
+                save_to_env("INTERVIEW_THRESHOLD", str(interview_threshold))
 
+                # تعيين متغيرات البيئة فوراً
+                os.environ["JOB_ID"] = job_id
+                os.environ["JOB_CITY"] = json.dumps(job_cities, ensure_ascii=False)
+                os.environ["JOB_REQUIREMENTS"] = job_requirements
+                os.environ["EVALUATION_MODE"] = "cv_only" if evaluation_mode == "تقييم السيرة الذاتية فقط" else "cv_and_test"
+                os.environ["INTERVIEW_THRESHOLD"] = str(interview_threshold)
+                
+                # تحديث حالة الجلسة
+                st.session_state["JOB_ID"] = job_id
+                st.session_state["JOB_CITY"] = job_cities
+                st.session_state["JOB_REQUIREMENTS"] = job_requirements
 
+                load_dotenv(override=True)
+                
+                job_config = {
+                    "JOB_ID": job_id,
+                    "JOB_CITY": json.dumps(job_cities, ensure_ascii=False),
+                    "JOB_REQUIREMENTS": job_requirements,
+                    "FORM_ID": os.getenv("FORM_ID", ""),
+                    "INTERVIEW_THRESHOLD": str(interview_threshold),
+                    "EVALUATION_MODE": "cv_only" if evaluation_mode == "تقييم السيرة الذاتية فقط" else "cv_and_test"
+                }
+
+                with st.spinner("جاري تشغيل خط التوظيف..."):
+                    success = app.run_pipeline(job_config)
+                    if success:
+                        st.success("تم تنفيذ خط التوظيف بنجاح ✅")
+                    else:
+                        st.error("فشل تشغيل خط التوظيف ❌")
+        
+        # زر تحديث قائمة المرشحين
+        if st.button("🔄 تحديث قائمة المرشحين"):
+            services = app.get_google_services()
+            if services:
+                candidates = app.get_candidates_from_sheet()
+                if candidates:
+                    st.session_state.candidates = candidates
+                    st.success(f"تم تحديث {len(candidates)} مرشح")
+                else:
+                    st.warning("لم يتم العثور على مرشحين أو فشل تحميل البيانات")
+            else:
+                st.error("فشل في تهيئة خدمات Google")
+    
+    # تبويبات لوحة التحكم
+    tab1, tab2 = st.tabs(["📈 لوحة التحكم", "👥 إدارة المرشحين"])
+    
+    # الحصول على جميع المرشحين
+    all_candidates = st.session_state.get('candidates', [])
+    
+    # تطبيق تصفية المدن إذا كانت مفعلة
+    if st.session_state.enable_city_filter and st.session_state.job_cities:
+        filtered_candidates = app.filter_candidates_by_city(all_candidates, st.session_state.job_cities)
+        st.info(f"📍 تم تصفية المدن: {', '.join(st.session_state.job_cities)} - ({len(filtered_candidates)} من أصل {len(all_candidates)} مرشح)")
+    else:
+        filtered_candidates = all_candidates
+        if st.session_state.enable_city_filter:
+            st.info("📍 عرض جميع المرشحين (لم يتم تحديد مدن للتصفية)")
+        else:
+            st.info("📍 عرض جميع المرشحين (التصفية معطلة)")
+
+    with tab1:
+        st.header("نظرة عامة على خط التوظيف")
+        if filtered_candidates:
+            app.display_metrics(filtered_candidates)
+            st.subheader("📅 حالة المرشحين")
+            status_data = []
+            for candidate in filtered_candidates:
+                status_data.append({
+                    "المرشح": candidate.name or candidate.email,
+                    "المدينة": candidate.city or "غير معروف",
+                    "الحالة": candidate.status,
+                    "تقييم السيرة الذاتية": candidate.cv_score or 0,
+                    "تقييم الاختبار": candidate.test_score or 0,
+                    "التقييم الكلي": candidate.overall_score or 0
+                })
+            if status_data:
+                df = pd.DataFrame(status_data)
+                st.dataframe(df, use_container_width=True)
+                
+                # Show filtering summary
+                if len(filtered_candidates) != len(all_candidates):
+                    st.info(f"💡 يتم عرض {len(filtered_candidates)} مرشح من أصل {len(all_candidates)} بعد التصفية")
+        else:
+            st.info("لا يوجد مرشحين. قم بتشغيل الخط أو التحديث.")
+
+    with tab2:
+        st.header("إدارة المرشحين")
+        if filtered_candidates:
+            candidate_options = [f"{c.name or 'غير معروف'} ({c.email}) - {c.city or 'غير معروف'}" for c in filtered_candidates]
+            selected_index = st.selectbox(
+                "اختر مرشح:",
+                range(len(filtered_candidates)),
+                index=st.session_state.selected_candidate_index,
+                format_func=lambda x: candidate_options[x]
+            )
+            st.session_state.selected_candidate_index = selected_index
+            if selected_index is not None:
+                selected_candidate = filtered_candidates[selected_index]
+                app.display_candidate_details(selected_candidate)
+            
+        else:    
+            st.info("لا يوجد مرشحين. قم بتشغيل الخط أو التحديث.")
 if __name__ == "__main__":
-    main()
+    main(
+          
+            
+
 
