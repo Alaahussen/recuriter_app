@@ -606,24 +606,37 @@ class ATSApp:
         """Ensure the user is authenticated with Google."""
         token_path = "token.json"
         
-        # If token exists, user is already authenticated
-        if os.path.exists(token_path):
+        # Check if already authenticated in session
+        if st.session_state.get('google_authenticated'):
             st.sidebar.success("✅ تم تسجيل الدخول إلى Google بالفعل")
             return True
         
-        # If no token, show authentication section
+        # If token exists, assume login
+        if os.path.exists(token_path):
+            try:
+                # Set session state to mark as authenticated
+                st.session_state.google_authenticated = True
+                st.sidebar.success("✅ تم تسجيل الدخول إلى Google بالفعل")
+                return True
+            except:
+                # If token is invalid, remove it
+                if os.path.exists(token_path):
+                    os.remove(token_path)
+        
+        # If no token yet, show login button
         st.subheader("🔐 تسجيل الدخول باستخدام Google للوصول إلى خدمات Drive, Sheets, Forms, Calendar")
         
-        # Use a separate form for authentication to avoid conflicts
-        with st.form("google_auth_form"):
-            st.write("يجب تسجيل الدخول إلى Google للمتابعة:")
-            auth_submitted = st.form_submit_button("تسجيل الدخول باستخدام Google")
+        # Use a form for the login button
+        with st.form("google_login_form"):
+            login_submitted = st.form_submit_button("تسجيل الدخول باستخدام Google")
             
-            if auth_submitted:
+            if login_submitted:
                 try:
                     gmail, calendar, drive, sheets, forms = google_services()
+                    # Mark as authenticated in session state
+                    st.session_state.google_authenticated = True
                     st.success("✅ تم تسجيل الدخول بنجاح!")
-                    st.rerun()  # Refresh to show the main form
+                    st.rerun()
                     return True
                 except FileNotFoundError:
                     st.error("⚠️ يرجى رفع ملف client_secret.json أولاً لتفعيل الدخول.")
@@ -632,12 +645,22 @@ class ATSApp:
                     st.error(f"حدث خطأ أثناء محاولة تسجيل الدخول: {e}")
                     return False
         
-        # Show info message outside the form
-        st.info("اضغط على زر 'تسجيل الدخول باستخدام Google' أعلاه للمتابعة.")
-        
-        # Don't use st.stop() - just return False to indicate not authenticated
+        st.info("اضغط على زر 'تسجيل الدخول باستخدام Google' أعلاه للمتابعة."
         return False
-    
+    def add_logout_button(self):
+        """Add a logout button to clear authentication"""
+        if st.sidebar.button("🚪 Logout"):
+            # Clear session state
+            if 'google_creds' in st.session_state:
+                del st.session_state.google_creds
+            
+            # Clear token file
+            if os.path.exists("token.json"):
+                os.remove("token.json")
+            
+            st.success("Logged out successfully!")
+            st.rerun()
+
     def display_candidate_details(self, candidate: Candidate):
         candidate_folder_id = self.get_candidate_folder_id(candidate)
         
@@ -729,10 +752,32 @@ class ATSApp:
 def main():
     st.sidebar.title("📋 نظام التوظيف الذكي")
     page = st.sidebar.radio("اختر الصفحة", ["🏠 الصفحة الرئيسية", "📊 لوحة التحكم"])
-
+    
     if "app_instance" not in st.session_state:
         st.session_state.app_instance = ATSApp()
     app = st.session_state.app_instance
+    
+    # Add logout button in sidebar (only show when authenticated)
+    if st.session_state.get('google_authenticated', False):
+        if st.sidebar.button("🚪 تسجيل الخروج", type="secondary"):
+            # Clear all authentication data
+            if 'google_creds' in st.session_state:
+                del st.session_state.google_creds
+            if 'google_authenticated' in st.session_state:
+                del st.session_state.google_authenticated
+            
+            # Remove token file
+            if os.path.exists("token.json"):
+                os.remove("token.json")
+            
+            # Clear any other Google-related session state
+            for key in list(st.session_state.keys()):
+                if 'google' in key.lower() or 'auth' in key.lower():
+                    del st.session_state[key]
+            
+            st.success("✅ تم تسجيل الخروج بنجاح!")
+            st.rerun()
+    
     if not app.ensure_google_auth():
         return
     # --- الصفحة الرئيسية ---
@@ -954,6 +999,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
