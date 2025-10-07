@@ -2,7 +2,7 @@ from typing import Any, Tuple
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow, InstalledAppFlow
-from google.auth.transport.requests import Reques
+from google.auth.transport.requests import Request
 import os
 import json
 import streamlit as st
@@ -123,6 +123,7 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     except Exception as e:
         st.error(f"❌ Failed to initialize Google services: {str(e)}")
         st.stop()
+
 
 
 
