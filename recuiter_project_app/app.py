@@ -974,7 +974,7 @@ def main():
         tab1, tab2 = st.tabs(["📈 لوحة التحكم", "👥 إدارة المرشحين"])
         
         # الحصول على جميع المرشحين
-        all_candidates = st.session_state.get('candidates', []
+        all_candidates = st.session_state.get('candidates', [])
         
         # تطبيق تصفية المدن إذا كانت مفعلة
         if st.session_state.enable_city_filter and st.session_state.job_cities:
@@ -1033,3 +1033,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
