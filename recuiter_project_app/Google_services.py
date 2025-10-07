@@ -1,8 +1,10 @@
-from typing import Any, Tuple
+import os
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
-import streamlit as st
-import tempfile
+from dotenv import load_dotenv
+
+# 1️⃣ Load environment variables from .env
+load_dotenv(override=True)
 
 SCOPES = [
     'https://www.googleapis.com/auth/gmail.modify',
@@ -13,25 +15,20 @@ SCOPES = [
     'https://www.googleapis.com/auth/forms.responses.readonly'
 ]
 
-def google_services(uploaded_credentials: Any = None) -> Tuple[Any, Any, Any, Any, Any]:
+def google_services_from_env():
     """
-    Returns (gmail, calendar, drive, sheets, forms) service clients authorized for SCOPES.
-    `uploaded_credentials` should be a Streamlit UploadedFile object or path to a service account JSON.
+    Initialize Google API services using the credentials path
+    stored in the .env file (CREDENTIALS_PATH).
     """
-    if uploaded_credentials is None:
-        raise ValueError("Please upload a Service Account JSON file.")
-
-    # Save temporarily if uploaded via Streamlit
-    if hasattr(uploaded_credentials, "read"):
-        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
-            tmp_file.write(uploaded_credentials.read())
-            credentials_path = tmp_file.name
-    else:
-        credentials_path = uploaded_credentials
+    creds_path = os.getenv("CREDENTIALS_PATH")
+    if not creds_path or not os.path.exists(creds_path):
+        raise FileNotFoundError(
+            "CREDENTIALS_PATH not found in environment or file does not exist. "
+            "Please upload your credentials and set the path in .env."
+        )
 
     creds = service_account.Credentials.from_service_account_file(
-        credentials_path,
-        scopes=SCOPES
+        creds_path, scopes=SCOPES
     )
 
     gmail = build('gmail', 'v1', credentials=creds)
