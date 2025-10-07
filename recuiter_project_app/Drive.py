@@ -46,16 +46,57 @@ def ensure_drive_folder(drive, folder_path: str) -> str:
 
 def ensure_sheet(sheets, drive, title: str, parent_folder_id: str) -> str:
     """Ensure sheet exists under folder and create 'Candidates' tab and header."""
+    # First, share the parent folder with the service account to avoid permission issues
+    try:
+        # Get service account email from any service
+        service_account_email = sheets._http.credentials.service_account_email
+        
+        # Share the parent folder with service account
+        permission = {
+            'type': 'user',
+            'role': 'writer',
+            'emailAddress': service_account_email
+        }
+        drive.permissions().create(
+            fileId=parent_folder_id,
+            body=permission,
+            fields='id'
+        ).execute()
+        logger.info(f"Shared parent folder with service account: {service_account_email}")
+    except Exception as e:
+        logger.warning(f"Could not share parent folder (might already be shared): {e}")
+
+    # Now check if sheet exists
     res = drive.files().list(q=(f"name = '{title}' and '{parent_folder_id}' in parents and "
                                 "mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false"),
                              fields='files(id,name)').execute()
     files = res.get('files', [])
     if files:
         return files[0]['id']
+    
+    # Create the sheet
     sheet = sheets.spreadsheets().create(body={'properties': {'title': title}}).execute()
     sheet_id = sheet['spreadsheetId']
-    # move to folder
+    
+    # Share the sheet itself with service account
+    try:
+        permission = {
+            'type': 'user',
+            'role': 'writer',
+            'emailAddress':lolo.hussien861@gmail.com
+        }
+        drive.permissions().create(
+            fileId=sheet_id,
+            body=permission,
+            fields='id'
+        ).execute()
+        logger.info(f"Shared new sheet with service account: {service_account_email}")
+    except Exception as e:
+        logger.warning(f"Could not share new sheet: {e}")
+    
+    # Move to folder
     drive.files().update(fileId=sheet_id, addParents=parent_folder_id, removeParents='root').execute()
+    
     # rename default sheet to Candidates
     requests = [{"updateSheetProperties": {"properties": {"sheetId": 0, "title": "Candidates"}, "fields": "title"}}]
     sheets.spreadsheets().batchUpdate(spreadsheetId=sheet_id, body={"requests": requests}).execute()
@@ -66,7 +107,6 @@ def ensure_sheet(sheets, drive, title: str, parent_folder_id: str) -> str:
     sheets.spreadsheets().values().update(spreadsheetId=sheet_id, range='Candidates!A1', valueInputOption='RAW',
                                          body={'values': header}).execute()
     return sheet_id
-
 def upsert_candidate_row(sheets, sheet_id: str, c: Candidate, drive_folder_link: str):
     row = [
         datetime.now(UTC).isoformat(), 
@@ -360,3 +400,4 @@ def node_check_existing_candidates(state: PipelineState) -> PipelineState:
         logger.error(f"Failed to check existing candidates: {e}")
     
     return state
+
