@@ -2,7 +2,7 @@
 __import__('pysqlite3')
 import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-import streamli as st
+import streamlit as st
 import os
 import json
 import pandas as pd
@@ -948,6 +948,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
