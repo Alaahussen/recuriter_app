@@ -34,7 +34,7 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
             st.warning(f"⚠️ خطأ في تحميل التوكن المحفوظ: {e}")
 
     # 2️⃣ If no valid creds, refresh or create new
-    if not creds or not creds.valid:
+    if not creds or not creds.valid
         if creds and creds.expired and creds.refresh_token:
             try:
                 creds.refresh(Request())
@@ -157,6 +157,7 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     except Exception as e:
         st.error(f"❌ فشل في تهيئة خدمات Google: {str(e)}")
         st.stop()
+
 
 
 
