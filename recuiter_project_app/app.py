@@ -733,7 +733,7 @@ def main():
     if "app_instance" not in st.session_state:
         st.session_state.app_instance = ATSApp()
     app = st.session_state.app_instance
-    if not app.ensure_google_auth()
+    if not app.ensure_google_auth():
         return
     # --- الصفحة الرئيسية ---
     if page == "🏠 الصفحة الرئيسية":
@@ -954,6 +954,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
