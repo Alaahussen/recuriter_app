@@ -15,7 +15,7 @@ SCOPES = [
     'https://www.googleapis.com/auth/forms.responses.readonly'
 ]
 
-def google_services_from_env():
+def google_services():
     """
     Initialize Google API services using the credentials path
     stored in the .env file (CREDENTIALS_PATH).
@@ -38,3 +38,4 @@ def google_services_from_env():
     forms = build('forms', 'v1', credentials=creds)
 
     return gmail, calendar, drive, sheets, forms
+
