@@ -28,7 +28,7 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     if os.path.exists(token_path):
         creds = Credentials.from_authorized_user_file(token_path, SCOPES)
 
-    if not creds or not creds.valid
+    if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
@@ -69,6 +69,7 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     forms = build('forms', 'v1', credentials=creds)
 
     return gmail, calendar, drive, sheets, forms
+
 
 
 
