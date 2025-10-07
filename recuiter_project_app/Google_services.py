@@ -1,4 +1,4 @@
-from typing import Any, Tuple
+from typing import Any, Tupl
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow, InstalledAppFlow
@@ -40,7 +40,7 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
                 raise FileNotFoundError("client_secret.json not found. Please upload it or configure your app credentials.")
 
             # Streamlit-specific: redirect URI
-            redirect_uri = "http://localhost:8501"
+            redirect_uri = "https://aicruiter.streamlit.app"
             os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # only for local dev
 
             # Check if running inside Streamlit (web) or local
@@ -75,3 +75,4 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     forms = build('forms', 'v1', credentials=creds)
 
     return gmail, calendar, drive, sheets, forms
+
