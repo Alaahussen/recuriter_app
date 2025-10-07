@@ -1,6 +1,6 @@
 # streamlit_app.py
 __import__('pysqlite3')
-import sys
+import s
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import streamlit as st
 import os
@@ -752,34 +752,30 @@ class ATSApp:
 def main():
     st.sidebar.title("📋 نظام التوظيف الذكي")
 
-    # Default page
+    # --- Page Initialization ---
     if "page" not in st.session_state:
         st.session_state.page = "🏠 الصفحة الرئيسية"
 
-    # Page selector
     page = st.sidebar.radio(
         "اختر الصفحة",
         ["🏠 الصفحة الرئيسية", "📊 لوحة التحكم"],
         index=["🏠 الصفحة الرئيسية", "📊 لوحة التحكم"].index(st.session_state.page)
     )
 
-    # Store page selection
     st.session_state.page = page
 
-    # Create app instance once
+    # --- Initialize App Instance ---
     if "app_instance" not in st.session_state:
         st.session_state.app_instance = ATSApp()
     app = st.session_state.app_instance
 
-    # Add logout button if authenticated
+    # --- Logout Button ---
     if st.session_state.get('google_authenticated', False):
         if st.sidebar.button("🚪 تسجيل الخروج", type="secondary"):
-            # Clear all session data
             for key in list(st.session_state.keys()):
                 if 'google' in key.lower() or 'auth' in key.lower() or key in ["app_instance", "page"]:
                     del st.session_state[key]
-
-            # Remove any saved token file (force fresh login)
+            # Remove any token file
             if os.path.exists("token.json"):
                 os.remove("token.json")
 
@@ -792,10 +788,13 @@ def main():
         if not app.ensure_google_auth():
             return
         else:
-            # When login succeeds, set state and redirect to home (same tab)
+            # Login succeeded
             st.session_state.google_authenticated = True
             st.session_state.page = "🏠 الصفحة الرئيسية"
-            st.rerun()
+            st.success("✅ تم تسجيل الدخول بنجاح! يمكنك الآن الانتقال إلى الصفحة الرئيسية.")
+            st.balloons()
+            return  # stop execution until rerun
+
 
     # --- الصفحة الرئيسية ---
     if page == "🏠 الصفحة الرئيسية":
@@ -804,12 +803,12 @@ def main():
 
         with st.form("home_form"):
             st.subheader("📧 بيانات الموارد البشرية")
-            hr_email = st.text_input("بريد الموارد البشرية (HR Email)", value=os.getenv("HR_FROM_EMAIL", ""))
-            form_id = st.text_input("معرف نموذج Google Form", value=os.getenv("FORM_ID", ""))
+            hr_email = st.text_input("بريد الموارد البشرية (HR Email)")
+            form_id = st.text_input("معرف نموذج Google Form")
 
             st.subheader("🤖 إعداد الذكاء الاصطناعي")
             model_choice = st.selectbox("اختر نموذج الذكاء الاصطناعي:", ["Gemini", "OpenAI"])
-            api_key = st.text_input("API Key", type="password", value=os.getenv("API_KEY", ""))
+            api_key = st.text_input("API Key", type="password")
             
 
             submitted = st.form_submit_button("➡️ متابعة إلى لوحة التحكم")
@@ -854,7 +853,7 @@ def main():
             st.header("⚙️ إعدادات الوظيفة")  
             with st.form("config_form"):
                 st.subheader("📄 تفاصيل الوظيفة")
-                job_id = st.text_input("معرف الوظيفة", value=os.getenv("JOB_ID", ""))
+                job_id = st.text_input("معرف الوظيفة")
 
                 enable_city_filter = st.checkbox(
                     "تفعيل تصفية المدن", 
@@ -880,7 +879,7 @@ def main():
                 app.send_tests_enabled = True if send_tests_enabled == "نعم" else False
 
                 st.subheader("📈 حدود التقييم")
-                interview_threshold = st.slider("الحد الأدنى للمقابلة", 0, 100, int(os.getenv("INTERVIEW_THRESHOLD", 70)))
+                interview_threshold = st.slider("الحد الأدنى للمقابلة", 0, 100, int(os.getenv("INTERVIEW_THRESHOLD", 50)))
                 evaluation_mode = st.selectbox(
                     "طريقة التقييم:",
                     ["تقييم السيرة الذاتية فقط", "تقييم السيرة الذاتية والاختبار"],
@@ -1016,6 +1015,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
