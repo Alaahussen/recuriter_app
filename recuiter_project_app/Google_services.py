@@ -18,21 +18,26 @@ SCOPES = [
 
 def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     """
-    Authorize Google APIs using pre-configured OAuth credentials.
-    Regular users just click "Login with Google" - no technical setup needed.
+    Authorize Google APIs using session-based tokens.
+    Each user gets their own isolated session.
     """
-    creds = None
-    token_path = "token.json"
-
-    # Load saved token if available
-    if os.path.exists(token_path):
-        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+    # Use session state instead of file
+    if 'google_creds' in st.session_state:
+        creds = st.session_state.google_creds
+    else:
+        creds = None
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            # Use YOUR pre-configured credentials from Streamlit secrets
+            try:
+                creds.refresh(Request())
+                st.session_state.google_creds = creds
+            except:
+                creds = None
+                st.session_state.google_creds = None
+
+        if not creds:
+            # Get client config from secrets
             client_config = {
                 "web": {
                     "client_id": "1049951738822-tikfl78a21u8j8drca04b71ec4q2e3qo.apps.googleusercontent.com",
@@ -43,33 +48,41 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
                 }
             }
             
-            flow = Flow.from_client_config(client_config, scopes=SCOPES, 
-                                         redirect_uri="https://aicruiter.streamlit.app")
+            flow = Flow.from_client_config(
+                client_config, 
+                scopes=SCOPES, 
+                redirect_uri="https://aicruiter.streamlit.app"
+            )
             
-            auth_url, _ = flow.authorization_url(prompt="consent")
-            st.markdown(f"[👉 Click here to authorize with Google]({auth_url})")
-
-            code = st.experimental_get_query_params().get("code")
+            # Get query parameters
+            query_params = st.experimental_get_query_params()
+            code = query_params.get("code")
+            
             if code:
+                # Exchange code for tokens
                 flow.fetch_token(code=code[0])
                 creds = flow.credentials
-                with open(token_path, "w") as token_file:
-                    token_file.write(creds.to_json())
-                st.success("✅ Google account connected!")
+                st.session_state.google_creds = creds
                 st.rerun()
             else:
-                st.info("Please click the authorization link above.")
+                # Show login button
+                auth_url, _ = flow.authorization_url(prompt="consent")
+                st.markdown("### 🔐 Login Required")
+                st.markdown(f"""
+                **Please login with your Google account to continue:**
+                
+                [👉 Login with Google]({auth_url})
+                """)
                 st.stop()
-
-    # Build and return services
+    
+    # Build services
     gmail = build('gmail', 'v1', credentials=creds)
     calendar = build('calendar', 'v3', credentials=creds)
     drive = build('drive', 'v3', credentials=creds)
     sheets = build('sheets', 'v4', credentials=creds)
-    forms = build('forms', 'v1', credentials=creds)
-
+    forms = build('forms', 'v1', credentials=creds
+    
     return gmail, calendar, drive, sheets, forms
-
 
 
 
