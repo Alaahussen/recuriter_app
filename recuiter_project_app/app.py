@@ -751,35 +751,52 @@ class ATSApp:
 
 def main():
     st.sidebar.title("📋 نظام التوظيف الذكي")
-    page = st.sidebar.radio("اختر الصفحة", ["🏠 الصفحة الرئيسية", "📊 لوحة التحكم"])
-    
+
+    # Default page
+    if "page" not in st.session_state:
+        st.session_state.page = "🏠 الصفحة الرئيسية"
+
+    # Page selector
+    page = st.sidebar.radio(
+        "اختر الصفحة",
+        ["🏠 الصفحة الرئيسية", "📊 لوحة التحكم"],
+        index=["🏠 الصفحة الرئيسية", "📊 لوحة التحكم"].index(st.session_state.page)
+    )
+
+    # Store page selection
+    st.session_state.page = page
+
+    # Create app instance once
     if "app_instance" not in st.session_state:
         st.session_state.app_instance = ATSApp()
     app = st.session_state.app_instance
-    
-    # Add logout button in sidebar (only show when authenticated)
+
+    # Add logout button if authenticated
     if st.session_state.get('google_authenticated', False):
         if st.sidebar.button("🚪 تسجيل الخروج", type="secondary"):
-            # Clear all authentication data
-            if 'google_creds' in st.session_state:
-                del st.session_state.google_creds
-            if 'google_authenticated' in st.session_state:
-                del st.session_state.google_authenticated
-            
-            # Remove token file
+            # Clear all session data
+            for key in list(st.session_state.keys()):
+                if 'google' in key.lower() or 'auth' in key.lower() or key in ["app_instance", "page"]:
+                    del st.session_state[key]
+
+            # Remove any saved token file (force fresh login)
             if os.path.exists("token.json"):
                 os.remove("token.json")
-            
-            # Clear any other Google-related session state
-            for key in list(st.session_state.keys()):
-                if 'google' in key.lower() or 'auth' in key.lower():
-                    del st.session_state[key]
-            
+
             st.success("✅ تم تسجيل الخروج بنجاح!")
+            st.session_state.page = "🏠 الصفحة الرئيسية"
             st.rerun()
-    
-    if not app.ensure_google_auth():
-        return
+
+    # --- Google Authentication ---
+    if not st.session_state.get("google_authenticated", False):
+        if not app.ensure_google_auth():
+            return
+        else:
+            # When login succeeds, set state and redirect to home (same tab)
+            st.session_state.google_authenticated = True
+            st.session_state.page = "🏠 الصفحة الرئيسية"
+            st.rerun()
+
     # --- الصفحة الرئيسية ---
     if page == "🏠 الصفحة الرئيسية":
         st.markdown('<h1 class="main-header">🏠 الصفحة الرئيسية</h1>', unsafe_allow_html=True)
@@ -999,6 +1016,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
