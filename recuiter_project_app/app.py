@@ -605,29 +605,38 @@ class ATSApp:
     def ensure_google_auth(self):
         """Ensure the user is authenticated with Google."""
         token_path = "token.json"
-    
-        # If token exists, assume login
+        
+        # If token exists, user is already authenticated
         if os.path.exists(token_path):
             st.sidebar.success("✅ تم تسجيل الدخول إلى Google بالفعل")
             return True
-    
-        # If no token yet, show login button
-        st.subheader("🔐 تسجيل الدخول باستخدام Google للوصول إلى خدمات Drive, Sheets, Forms, Calendar")
-        if st.button("تسجيل الدخول باستخدام Google"):
-            try:
-                gmail, calendar, drive, sheets, forms = google_services()
-                st.success("✅ تم تسجيل الدخول بنجاح!")
-                return True
-            except FileNotFoundError:
-                st.error("⚠️ يرجى رفع ملف client_secret.json أولاً لتفعيل الدخول.")
-                st.stop()
-            except Exception as e:
-                st.error(f"حدث خطأ أثناء محاولة تسجيل الدخول: {e}")
-                st.stop()
-        else:
-            st.info("اضغط على الزر أعلاه لتسجيل الدخول.")
-            st.stop()
         
+        # If no token, show authentication section
+        st.subheader("🔐 تسجيل الدخول باستخدام Google للوصول إلى خدمات Drive, Sheets, Forms, Calendar")
+        
+        # Use a separate form for authentication to avoid conflicts
+        with st.form("google_auth_form"):
+            st.write("يجب تسجيل الدخول إلى Google للمتابعة:")
+            auth_submitted = st.form_submit_button("تسجيل الدخول باستخدام Google")
+            
+            if auth_submitted:
+                try:
+                    gmail, calendar, drive, sheets, forms = google_services()
+                    st.success("✅ تم تسجيل الدخول بنجاح!")
+                    st.rerun()  # Refresh to show the main form
+                    return True
+                except FileNotFoundError:
+                    st.error("⚠️ يرجى رفع ملف client_secret.json أولاً لتفعيل الدخول.")
+                    return False
+                except Exception as e:
+                    st.error(f"حدث خطأ أثناء محاولة تسجيل الدخول: {e}")
+                    return False
+        
+        # Show info message outside the form
+        st.info("اضغط على زر 'تسجيل الدخول باستخدام Google' أعلاه للمتابعة.")
+        
+        # Don't use st.stop() - just return False to indicate not authenticated
+        return False
     
     def display_candidate_details(self, candidate: Candidate):
         candidate_folder_id = self.get_candidate_folder_id(candidate)
@@ -948,6 +957,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
