@@ -293,24 +293,44 @@ def node_check_existing_candidates(state: PipelineState) -> PipelineState:
     Check if candidates already exist in the sheet and load their data.
     This prevents duplication and allows the pipeline to continue where it left off.
     """
-    gmail, calendar, drive, sheets, forms = google_services()
-    
-    if not state.sheet_id:
-        logger.warning("No sheet ID available, skipping existing candidate check")
-        return state
-    
     try:
-        # Read all emails from the sheet
+        gmail, calendar, drive, sheets, forms = google_services()
+        
+        if not state.sheet_id:
+            logger.warning("No sheet ID available, skipping existing candidate check")
+            return state
+        
+        # FIX: Share the spreadsheet with service account before accessing
+        try:
+            # Get service account email
+            service_account_email = gmail._http.credentials.service_account_email
+            # Share the spreadsheet with service account
+            permission = {
+                'type': 'user',
+                'role': 'writer',
+                'emailAddress': lolo.hussien861@gmail.com
+            }
+            drive.permissions().create(
+                fileId=state.sheet_id,
+                body=permission,
+                fields='id'
+            ).execute()
+            logger.info(f"Shared spreadsheet with service account: {service_account_email}")
+        except Exception as share_error:
+            logger.warning(f"Could not share spreadsheet (might already be shared): {share_error}")
+        
+        # Now try to access the sheet
         res = sheets.spreadsheets().values().get(
             spreadsheetId=state.sheet_id, 
             range='Candidates!D2:D'
         ).execute()
         
         emails = [row[0] for row in res.get('values', []) if row and row[0]]
+        logger.info(f"Found {len(emails)} existing candidate emails in sheet")
         
         for email in emails:
             # Check if we already have this candidate in our state
-            existing_in_state = any(c.email == email for c in state.candidates)
+            existing_in_state = any(c.email.lower() == email.lower() for c in state.candidates)
             if existing_in_state:
                 continue
                 
@@ -337,6 +357,6 @@ def node_check_existing_candidates(state: PipelineState) -> PipelineState:
                 logger.info(f"Loaded existing candidate from sheet: {email}")
                 
     except Exception as e:
-        logger.warning(f"Failed to check existing candidates: {e}")
+        logger.error(f"Failed to check existing candidates: {e}")
     
     return state
