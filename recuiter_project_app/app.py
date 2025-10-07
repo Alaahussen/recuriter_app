@@ -733,17 +733,14 @@ def main():
     if "app_instance" not in st.session_state:
         st.session_state.app_instance = ATSApp()
     app = st.session_state.app_instance
-
+    if not app.ensure_google_auth()
+        return
     # --- الصفحة الرئيسية ---
     if page == "🏠 الصفحة الرئيسية":
         st.markdown('<h1 class="main-header">🏠 الصفحة الرئيسية</h1>', unsafe_allow_html=True)
         st.write("قم بإعداد الاتصال بالنظام قبل البدء في متابعة عملية التوظيف")
 
         with st.form("home_form"):
-            creds = app.ensure_google_auth()
-            if not creds:
-                st.warning("⚠️ يرجى تسجيل الدخول بحساب Google أولاً للمتابعة.")
-                st.stop()
             st.subheader("📧 بيانات الموارد البشرية")
             hr_email = st.text_input("بريد الموارد البشرية (HR Email)", value=os.getenv("HR_FROM_EMAIL", ""))
             form_id = st.text_input("معرف نموذج Google Form", value=os.getenv("FORM_ID", ""))
@@ -957,6 +954,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
