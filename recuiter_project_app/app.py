@@ -601,6 +601,34 @@ class ATSApp:
             st.metric("Rejected", rejected)
         with col4:
             st.metric("Tests Completed", tested)
+    import streamlit as st
+
+def ensure_google_auth():
+    """Ensure the user is authenticated with Google."""
+    token_path = "token.json"
+
+    # If token exists, assume login
+    if os.path.exists(token_path):
+        st.sidebar.success("✅ تم تسجيل الدخول إلى Google بالفعل")
+        return True
+
+    # If no token yet, show login button
+    st.subheader("🔐 تسجيل الدخول باستخدام Google للوصول إلى خدمات Drive, Sheets, Forms, Calendar")
+    if st.button("تسجيل الدخول باستخدام Google"):
+        try:
+            gmail, calendar, drive, sheets, forms = google_services()
+            st.success("✅ تم تسجيل الدخول بنجاح!")
+            return True
+        except FileNotFoundError:
+            st.error("⚠️ يرجى رفع ملف client_secret.json أولاً لتفعيل الدخول.")
+            st.stop()
+        except Exception as e:
+            st.error(f"حدث خطأ أثناء محاولة تسجيل الدخول: {e}")
+            st.stop()
+    else:
+        st.info("اضغط على الزر أعلاه لتسجيل الدخول.")
+        st.stop()
+        
     
     def display_candidate_details(self, candidate: Candidate):
         candidate_folder_id = self.get_candidate_folder_id(candidate)
@@ -704,9 +732,10 @@ def main():
         st.write("قم بإعداد الاتصال بالنظام قبل البدء في متابعة عملية التوظيف")
 
         with st.form("home_form"):
-            st.subheader("📁 تحميل ملف الاعتماد (credentials.json)")
-            uploaded_file = st.file_uploader("قم برفع ملف الاعتماد من Google", type=["json"])
-
+            creds = ensure_google_auth()
+            if not creds:
+                st.warning("⚠️ يرجى تسجيل الدخول بحساب Google أولاً للمتابعة.")
+                st.stop()
             st.subheader("📧 بيانات الموارد البشرية")
             hr_email = st.text_input("بريد الموارد البشرية (HR Email)", value=os.getenv("HR_FROM_EMAIL", ""))
             form_id = st.text_input("معرف نموذج Google Form", value=os.getenv("FORM_ID", ""))
@@ -719,33 +748,23 @@ def main():
             submitted = st.form_submit_button("➡️ متابعة إلى لوحة التحكم")
 
             if submitted:
-                if uploaded_file is None:
-                    st.error("❌ يرجى رفع ملف الاعتماد أولاً.")
-                elif not hr_email or not form_id:
+                if not hr_email or not form_id:
                     st.error("❌ يرجى إدخال بريد الموارد البشرية ومعرف النموذج.")
                 elif not api_key:
                     st.error("❌ يرجى إدخال مفتاح الـ API.")
                 else:
                     # حفظ ملف الاعتماد
-                    creds_path = os.path.join(os.getcwd(), "credentials.json")
-                    with open(creds_path, "wb") as f:
-                        f.write(uploaded_file.getbuffer())
-
-                    # حفظ القيم في البيئة والجلسة
-                    save_to_env("CREDENTIALS_PATH", creds_path)
                     save_to_env("FORM_ID", form_id) 
                     save_to_env("MODEL_TYPE", model_choice)
                     if model_choice=="Gemini":
                         save_to_env("GEMINI_API_KEY", api_key)
                     else:
                         save_to_env("OPENAI_API_KEY", api_key)
-                    os.environ["CREDENTIALS_PATH"] = creds_path
                     os.environ["HR_FROM_EMAIL"] = hr_email
                     os.environ["FORM_ID"] = form_id
                     os.environ["API_KEY"] = api_key
                     os.environ["MODEL_TYPE"] = model_choice
 
-                    st.session_state["CREDENTIALS_PATH"] = creds_path
                     st.session_state["HR_FROM_EMAIL"] = hr_email
                     st.session_state["FORM_ID"] = form_id
                     st.session_state["API_KEY"] = api_key
@@ -930,5 +949,6 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
