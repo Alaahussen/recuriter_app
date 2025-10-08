@@ -602,51 +602,36 @@ class ATSApp:
         with col4:
             st.metric("Tests Completed", tested)
 
-    def ensure_google_auth(self):
-        """Ensure the user is authenticated with Google."""
+    def ensure_google_auth(self)
+        """Ensure the user is authenticated with Google and initialize the services."""
         token_path = "token.json"
-        
-        # Check if already authenticated in session
-        if st.session_state.get('google_authenticated'):
-            st.sidebar.success("✅ تم تسجيل الدخول إلى Google بالفعل")
-            return True
-        
-        # If token exists, assume login
+    
+        # 🔄 Always remove any stored token (no saving allowed)
         if os.path.exists(token_path):
+            os.remove(token_path)
+    
+        # ✅ If already authenticated in session
+        if st.session_state.get('google_authenticated', False):
             try:
-                # Set session state to mark as authenticated
-                st.session_state.google_authenticated = True
-                st.sidebar.success("✅ تم تسجيل الدخول إلى Google بالفعل")
+                gmail, calendar, drive, sheets, forms = google_services()
                 return True
-            except:
-                # If token is invalid, remove it
-                if os.path.exists(token_path):
-                    os.remove(token_path)
-        
-        # If no token yet, show login button
-        st.subheader("🔐 تسجيل الدخول باستخدام Google للوصول إلى خدمات Drive, Sheets, Forms, Calendar")
-        
-        # Use a form for the login button
-        with st.form("google_login_form"):
-            login_submitted = st.form_submit_button("تسجيل الدخول باستخدام Google")
-            
-            if login_submitted:
-                try:
-                    gmail, calendar, drive, sheets, forms = google_services()
-                    # Mark as authenticated in session state
-                    st.session_state.google_authenticated = True
-                    st.success("✅ تم تسجيل الدخول بنجاح!")
-                    st.rerun()
-                    return True
-                except FileNotFoundError:
-                    st.error("⚠️ يرجى رفع ملف client_secret.json أولاً لتفعيل الدخول.")
-                    return False
-                except Exception as e:
-                    st.error(f"حدث خطأ أثناء محاولة تسجيل الدخول: {e}")
-                    return False
-        
-        st.info("اضغط على زر 'تسجيل الدخول باستخدام Google' أعلاه للمتابعة.")
-        return False
+            except Exception as e:
+                st.error(f"⚠️ فشل في تهيئة خدمات Google: {e}")
+                st.session_state.google_authenticated = False
+                return False
+    
+        # 🚀 If not authenticated yet, trigger new OAuth flow
+        try:
+            gmail, calendar, drive, sheets, forms = google_services()
+            st.session_state.google_authenticated = True
+            return True
+        except FileNotFoundError:
+            st.error("⚠️ يرجى رفع ملف client_secret.json أولاً لتفعيل الدخول.")
+            return False
+        except Exception as e:
+            st.error(f"حدث خطأ أثناء محاولة تسجيل الدخول: {e}")
+            return False
+
     def add_logout_button(self):
         """Add a logout button to clear authentication"""
         if st.sidebar.button("🚪 Logout"):
@@ -1012,6 +997,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
