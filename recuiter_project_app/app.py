@@ -18,18 +18,17 @@ import re
 from googleapiclient.http import MediaIoBaseUpload
 from config import *
 from Featch_cv import normalize_arabic_text
-# Import your existing functions
+# استيراد الدوال الموجودة
 from Google_services import google_services
 from Drive import (
     ensure_drive_folder, ensure_sheet, get_candidate_from_sheet,
     find_candidate_row_by_email, read_drive_file_text
 )
 
-
-# Load environment variables
+# تحميل متغيرات البيئة
 load_dotenv()
 
-# Page configuration
+# إعدادات الصفحة
 st.set_page_config(
     page_title="لوحة متابعة التوظيف",
     page_icon="📊",
@@ -37,21 +36,20 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
-# Custom CSS - Enhanced for Arabic RTL
+# تنسيق CSS للغة العربية
 st.markdown("""
 <style>
-    /* Import Arabic font */
+    /* استيراد خط عربي */
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
     
-    /* RTL Base Styles for entire app */
+    /* تنسيق RTL أساسي لجميع العناصر */
     .main .block-container {
         direction: rtl;
         text-align: right;
         font-family: 'Tajawal', 'Segoe UI', sans-serif;
     }
     
-    /* RTL for all text elements */
+    /* تنسيق RID لجميع عناصر النص */
     .main-header, .metric-card, .candidate-card, .report-section,
     h1, h2, h3, h4, h5, h6, p, div, span, label {
         direction: rtl;
@@ -99,7 +97,7 @@ st.markdown("""
         margin: 1rem 0;
     }
     
-    /* RTL for Streamlit specific components */
+    /* تنسيق RTL لمكونات Streamlit */
     .stTextInput > div > div > input,
     .stTextArea > div > div > textarea,
     .stNumberInput > div > div > input,
@@ -110,26 +108,26 @@ st.markdown("""
         font-family: 'Tajawal', sans-serif;
     }
     
-    /* RTL for buttons */
+    /* تنسيق RTL للأزرار */
     .stButton > button {
         font-family: 'Tajawal', sans-serif;
     }
     
-    /* RTL for radio buttons */
+    /* تنسيق RDL لأزرار الراديو */
     .stRadio > label {
         direction: rtl;
         text-align: right;
         padding-right: 20px;
     }
     
-    /* RTL for checkboxes */
+    /* تنسيق RTL لمربعات الاختيار */
     .stCheckbox > label {
         direction: rtl;
         text-align: right;
         padding-right: 20px;
     }
     
-    /* RTL for sidebar */
+    /* تنسيق RTL للشريط الجانبي */
     [data-testid="stSidebar"] {
         direction: rtl;
         text-align: right;
@@ -142,12 +140,12 @@ st.markdown("""
         text-align: right;
     }
     
-    /* RTL for tabs */
+    /* تنسيق RTL للتبويبات */
     .stTabs [data-baseweb="tab-list"] {
         direction: rtl;
     }
     
-    /* RTL for dataframes */
+    /* تنسيق RTL للجداول */
     .dataframe {
         direction: rtl;
     }
@@ -156,25 +154,30 @@ st.markdown("""
         text-align: right !important;
     }
     
-    /* RTL for alerts and info boxes */
+    /* تنسيق RTL للتنبيهات */
     .stAlert {
         direction: rtl;
         text-align: right;
     }
     
-    /* RTL for form labels */
+    /* تنسيق RTL للنماذج */
     .stForm {
         direction: rtl;
     }
     
-    /* RTL for selectbox dropdown */
+    /* تنسيق RTL للقوائم المنسدلة */
     .stSelectbox [data-baseweb="select"] div {
         text-align: right;
     }
     
-    /* RTL for multiselect */
+    /* تنسيق RTL للتحديد المتعدد */
     .stMultiSelect [data-baseweb="select"] div {
         text-align: right;
+    }
+    
+    /* تنسيق RTL لعناصر النموذج */
+    .stFormSubmitButton {
+        direction: rtl;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -185,9 +188,9 @@ class ATSApp:
         self.state = None
         self.sheet_id = None
         self.drive_folder_id = None
-        self.send_tests_enabled = True  # default
+        self.send_tests_enabled = True  # افتراضي
         
-        # Initialize session state
+        # تهيئة حالة الجلسة
         if 'candidates' not in st.session_state:
             st.session_state.candidates = []
         if 'selected_candidate_index' not in st.session_state:
@@ -206,15 +209,15 @@ class ATSApp:
             st.session_state.regenerate_questions = "استخدام الأسئلة الموجودة (لا إنشاء جديد)"
     
     def normalize_city_name(self, city: str) -> str:
-        """Normalize city names for better matching"""
+        """توحيد أسماء المدن لمطابقة أفضل"""
         if not city:
             return ""
         
         city = str(city).strip()
         
-        # Common city variations and normalizations
+        # الاختلافات الشائعة في أسماء المدن
         city_variations = {
-            # Arabic variations
+            # الاختلافات العربية
             'مكه': 'مكة',
             'مكّه': 'مكة',
             'مكة المكرمة': 'مكة',
@@ -224,7 +227,7 @@ class ATSApp:
             'جدّه': 'جدة',
             'الدمام': 'الدمام',
             'الطائف': 'الطائف',
-            # English variations
+            # الاختلافات الإنجليزية
             'makkah': 'مكة',
             'mecca': 'مكة',
             'madina': 'المدينة',
@@ -235,13 +238,13 @@ class ATSApp:
             'taif': 'الطائف'
         }
         
-        # Normalize Arabic text
-        city =normalize_arabic_text(city)
+        # توحيد النص العربي
+        city = normalize_arabic_text(city)
         
-        # Convert to lowercase for comparison
+        # التحويل للأحرف الصغيرة للمقارنة
         city_lower = city.lower()
         
-        # Check for variations
+        # التحقق من الاختلافات
         for variation, normalized in city_variations.items():
             if variation in city_lower or city_lower in variation:
                 return normalized
@@ -249,7 +252,7 @@ class ATSApp:
         return city
     
     def cities_match(self, candidate_city: str, selected_cities: List[str]) -> bool:
-        """Check if candidate city matches any selected city"""
+        """التحقق مما إذا كانت مدينة المرشح تطابق أي مدينة محددة"""
         if not candidate_city or not selected_cities:
             return False
         
@@ -258,23 +261,23 @@ class ATSApp:
         for selected_city in selected_cities:
             normalized_selected = self.normalize_city_name(selected_city)
             
-            # Exact match
+            # تطابق تام
             if normalized_candidate_city == normalized_selected:
                 return True
             
-            # Substring match (more flexible)
+            # تطابق جزئي (مرن أكثر)
             if (normalized_selected in normalized_candidate_city or 
                 normalized_candidate_city in normalized_selected):
                 return True
             
-            # Check for common abbreviations or variations
+            # التحقق من الاختصارات أو الاختلافات الشائعة
             if self.are_cities_similar(normalized_candidate_city, normalized_selected):
                 return True
         
         return False
     
     def are_cities_similar(self, city1: str, city2: str) -> bool:
-        """Check if two city names are similar"""
+        """التحقق مما إذا كان اسمي المدينة متشابهين"""
         common_aliases = {
             'مكة': ['مكه', 'مكّه', 'مكة المكرمة', 'makkah', 'mecca'],
             'المدينة': ['المدينة المنورة', 'madina', 'medina'],
@@ -287,7 +290,7 @@ class ATSApp:
         city1_norm = self.normalize_city_name(city1)
         city2_norm = self.normalize_city_name(city2)
         
-        # Check if they are direct matches in aliases
+        # التحقق مما إذا كانا متطابقين مباشرة في الأسماء المستعارة
         for main_city, aliases in common_aliases.items():
             if (city1_norm == main_city and city2_norm in aliases) or \
                (city2_norm == main_city and city1_norm in aliases):
@@ -296,7 +299,7 @@ class ATSApp:
         return False
     
     def filter_candidates_by_city(self, candidates: List[Candidate], selected_cities: List[str]) -> List[Candidate]:
-        """Filter candidates by city if filtering is enabled"""
+        """تصفية المرشحين حسب المدينة إذا كان التصفية مفعلة"""
         if not st.session_state.enable_city_filter or not selected_cities:
             return candidates
         
@@ -332,15 +335,15 @@ class ATSApp:
         gmail, calendar, drive, sheets, forms = services
         
         try:
-            # FIX: Get job_id from environment or session state consistently
+            # الحصول على job_id من البيئة أو حالة الجلسة
             job_id = os.getenv("JOB_ID") or st.session_state.get("JOB_ID")
             if not job_id:
                 st.error("❌ لم يتم العثور على معرف الوظيفة (JOB_ID). يرجى تعبئة الحقول أولاً.")
                 return None
 
-            # FIX: Ensure job_id is not None in folder name
+            # التأكد من أن job_id ليس None في اسم المجلد
             drive_folder_name = f"ATS/{job_id}"
-            sheet_title = f"ATS_Candidates_{job_id}"  # FIX: Make sheet name unique per job
+            sheet_title = f"ATS_Candidates_{job_id}"  # جعل اسم الورقة فريدًا لكل وظيفة
             
             self.drive_folder_id = ensure_drive_folder(drive, drive_folder_name)
             st.session_state.drive_folder_id = self.drive_folder_id
@@ -359,23 +362,23 @@ class ATSApp:
     def run_pipeline(self, job_config: Dict[str, Any]):
         load_dotenv(override=True)
         try:
-            # FIX: Clear previous candidates when starting new pipeline
+            # مسح المرشحين السابقين عند بدء خط أنابيب جديد
             st.session_state.candidates = []
             
-            # FIX: Ensure all job config values are set
+            # التأكد من تعيين جميع قيم تكوين الوظيفة
             for key, value in job_config.items():
-                if value:  # Only set if value is not empty
+                if value:  # التعيين فقط إذا كانت القيمة غير فارغة
                     os.environ[key] = value
                     st.session_state[key] = value
             
-            # FIX: Verify JOB_ID is set before proceeding
+            # التحقق من تعيين JOB_ID قبل المتابعة
             if not os.getenv("JOB_ID"):
                 st.error("❌ JOB_ID غير محدد. يرجى تعبئة الحقول أولاً.")
                 return False
                 
             sheet_id = self.setup_infrastructure()
             if not sheet_id:
-                st.error("فشل في إعداد Google infrastructure")
+                st.error("فشل في إعداد البنية التحتية لـ Google")
                 return False
             
             self.sheet_id = sheet_id
@@ -415,7 +418,7 @@ class ATSApp:
             for email in emails:
                 candidate_data = get_candidate_from_sheet(sheets, sheet_id, email)
                 if candidate_data:
-                    # Ensure scores are numbers, not None
+                    # التأكد من أن النقاط أرقام وليست None
                     cv_score = candidate_data.get('cv_score')
                     test_score = candidate_data.get('test_score') 
                     overall_score = candidate_data.get('overall_score')
@@ -438,7 +441,7 @@ class ATSApp:
             return candidates
             
         except Exception as e:
-            st.error(f"Error reading from Google Sheets: {str(e)}")
+            st.error(f"خطأ في القراءة من Google Sheets: {str(e)}")
             return []
     
     def get_candidate_folder_id(self, candidate: Candidate) -> str:
@@ -466,19 +469,19 @@ class ATSApp:
                 return folder['id']
                 
         except Exception as e:
-            st.error(f"Failed to get/create candidate folder for {candidate.email}: {str(e)}")
+            st.error(f"فشل في الحصول/إنشاء مجلد المرشح لـ {candidate.email}: {str(e)}")
             return ""
     
     def get_interview_questions(self, candidate: Candidate) -> str:
         services = self.get_google_services()
         if not services:
-            return "Google services not initialized."
+            return "خدمات Google غير مهيأة."
         
         gmail, calendar, drive, sheets, forms = services
         
         candidate_folder_id = self.get_candidate_folder_id(candidate)
         if not candidate_folder_id:
-            return "No drive folder available for this candidate."
+            return "لا يوجد مجلد Drive متاح لهذا المرشح."
         
         try:
             query = f"'{candidate_folder_id}' in parents and (name contains 'interview_questions' or name contains 'questions') and trashed = false"
@@ -490,21 +493,21 @@ class ATSApp:
                 if content:
                     return content
             
-            return "No interview questions found in candidate's folder."
+            return "لم يتم العثور على أسئلة مقابلة في مجلد المرشح."
                 
         except Exception as e:
-            return f"Error loading interview questions: {str(e)}"
+            return f"خطأ في تحميل أسئلة المقابلة: {str(e)}"
 
     def get_candidate_report(self, candidate: Candidate) -> str:
         services = self.get_google_services()
         if not services:
-            return "Google services not initialized."
+            return "خدمات Google غير مهيأة."
         
         gmail, calendar, drive, sheets, forms = services
         
         candidate_folder_id = self.get_candidate_folder_id(candidate)
         if not candidate_folder_id:
-            return "No drive folder available for this candidate."
+            return "لا يوجد مجلد Drive متاح لهذا المرشح."
         
         try:
             query = f"'{candidate_folder_id}' in parents and (name contains 'report.json' or name contains 'report') and trashed = false"
@@ -520,14 +523,14 @@ class ATSApp:
                             return self.format_report_as_markdown(data)
                         except:
                             return self.format_text_report(content)
-            return "No readable report files found in candidate's folder."
+            return "لم يتم العثور على ملفات تقرير قابلة للقراءة في مجلد المرشح."
                 
         except Exception as e:
-            return f"Error loading report: {str(e)}"
+            return f"خطأ في تحميل التقرير: {str(e)}"
     
     def format_report_as_markdown(self, data: Dict) -> str:
-        """Format JSON report as well-structured markdown"""
-        md = "# Candidate Report\n\n"
+        """تنسيق التقرير JSON كـ markdown منظم"""
+        md = "# تقرير المرشح\n\n"
         
         for section, content in data.items():
             if isinstance(content, dict):
@@ -551,9 +554,9 @@ class ATSApp:
         return md
     
     def format_text_report(self, content: str) -> str:
-        """Format plain text report with better structure"""
+        """تنسيق التقرير النصي العادي بهيكل أفضل"""
         lines = content.split('\n')
-        md = "# Candidate Report\n\n"
+        md = "# تقرير المرشح\n\n"
         
         for line in lines:
             line = line.strip()
@@ -569,9 +572,9 @@ class ATSApp:
         return md
     
     def format_questions_as_markdown(self, content: str) -> str:
-        """Format interview questions with proper markdown"""
+        """تنسيق أسئلة المقابلة بـ markdown مناسب"""
         lines = content.split('\n')
-        md = "# Interview Questions\n\n"
+        md = "# أسئلة المقابلة\n\n"
         
         question_number = 1
         for line in lines:
@@ -579,7 +582,7 @@ class ATSApp:
             if not line:
                 continue
             if any(keyword in line.lower() for keyword in ['question', 'q:']):
-                md += f"## Question {question_number}\n\n{line}\n\n"
+                md += f"## السؤال {question_number}\n\n{line}\n\n"
                 question_number += 1
             else:
                 md += f"{line}\n\n"
@@ -587,15 +590,15 @@ class ATSApp:
         return md
     
     def reset_job_inputs(self):
-        """Reset only job-related info"""
+        """إعادة تعيين معلومات الوظيفة فقط"""
         for key in ["JOB_ID", "JOB_CITY", "JOB_REQUIREMENTS"]:
             if key in st.session_state:
                 del st.session_state[key]
-        # Also reset candidate list
+        # أيضًا إعادة تعيين قائمة المرشحين
         st.session_state.candidates = []
     
     def regenerate_interview_questions(self, candidate: Candidate, mode: str = "both") -> bool:
-        """Regenerate interview questions based on the selected mode (cv / job_requirements / both)."""
+        """إعادة إنشاء أسئلة المقابلة بناءً على الوضع المحدد (cv / job_requirements / both)."""
         try:
             services = self.get_google_services()
             if not services:
@@ -606,7 +609,7 @@ class ATSApp:
             job_requirements = os.getenv("JOB_REQUIREMENTS", "")
             job_id = os.getenv("JOB_ID", "")
 
-            # Build prompt strictly based on mode
+            # بناء النص بناءً على الوضع
             if mode == "cv":
                 source_text = f"السيرة الذاتية:\n{candidate.raw_text[:15000]}"
                 prompt_intro = (
@@ -625,7 +628,7 @@ class ATSApp:
                 )
                 prompt_intro = "اعتمد على السيرة الذاتية ومتطلبات الوظيفة لإنشاء أسئلة مقابلة مناسبة."
 
-            # Final combined prompt
+            # النص النهائي المدمج
             prompt = f"""
             {prompt_intro}
 
@@ -637,10 +640,10 @@ class ATSApp:
             {source_text}
                     """.strip()
 
-            # Generate response from LLM
+            # إنشاء استجابة من LLM
             llm_response = llm_json(prompt)
 
-            # Extract questions safely
+            # استخراج الأسئلة بأمان
             if isinstance(llm_response, list):
                 new_questions = llm_response
             elif isinstance(llm_response, dict):
@@ -652,32 +655,31 @@ class ATSApp:
                 st.error("فشل في استخراج الأسئلة من الاستجابة.")
                 return False
 
-            # Save to Drive
+            # الحفظ في Drive
             candidate_folder_id = self.get_candidate_folder_id(candidate)
             if not candidate_folder_id:
                 return False
 
-            # Delete old question files
+            # حذف ملفات الأسئلة القديمة
             self.delete_old_question_files(drive, candidate_folder_id)
 
-            # Save new file
+            # حفظ الملف الجديد
             content = io.BytesIO("\n".join(new_questions).encode("utf-8"))
             media = MediaIoBaseUpload(content, mimetype="text/plain", resumable=False)
             meta = {"name": f"interview_questions_{candidate.email}.txt", "parents": [candidate_folder_id]}
             drive.files().create(body=meta, media_body=media, fields="id, webViewLink").execute()
 
-            # Update candidate object
+            # تحديث كائن المرشح
             candidate.interview_questions = new_questions
 
             return True
 
         except Exception as e:
-            st.error(f"Error regenerating questions: {str(e)}")
+            st.error(f"خطأ في إعادة إنشاء الأسئلة: {str(e)}")
             return False
 
     def delete_old_question_files(self, drive, candidate_folder_id: str):
-
-        """Delete existing question files"""
+        """حذف ملفات الأسئلة الموجودة"""
         try:
             query = f"'{candidate_folder_id}' in parents and (name contains 'interview_questions' or name contains 'questions') and trashed = false"
             results = drive.files().list(q=query, fields="files(id)").execute()
@@ -686,7 +688,7 @@ class ATSApp:
                 drive.files().delete(fileId=file['id']).execute()
                 
         except Exception as e:
-            print(f"Warning: Could not delete old question files: {e}")
+            print(f"تحذير: لا يمكن حذف ملفات الأسئلة القديمة: {e}")
     
     def display_metrics(self, candidates: List[Candidate]):
         col1, col2, col3, col4, col5 = st.columns(5)
@@ -695,54 +697,70 @@ class ATSApp:
         interviewed = len([c for c in candidates if c.status == 'interview_scheduled'])
         rejected = len([c for c in candidates if c.status == 'rejected'])
         tested = len([c for c in candidates if c.test_score is not None])
+        high_score = len([c for c in candidates if c.overall_score and c.overall_score >= 70])
         
         with col1:
-            st.metric("Total Candidates", total_candidates)
+            st.metric("إجمالي المرشحين", total_candidates)
         with col2:
-            st.metric("Interviews Scheduled", interviewed)
+            st.metric("المقابلات المجدولة", interviewed)
         with col3:
-            st.metric("Rejected", rejected)
+            st.metric("المرفوضين", rejected)
         with col4:
-            st.metric("Tests Completed", tested)
+            st.metric("الاختبارات المكتملة", tested)
+        with col5:
+            st.metric("مرشحين ممتازين", high_score)
+
+    def get_arabic_status(self, status: str) -> str:
+        """تحويل الحالة إلى العربية"""
+        status_map = {
+            'received': 'مستلم',
+            'interview_scheduled': 'مقابلة مجدولة',
+            'rejected': 'مرفوض',
+            'accepted': 'مقبول',
+            'test_sent': 'تم إرسال الاختبار',
+            'test_completed': 'تم إكمال الاختبار'
+        }
+        return status_map.get(status, status)
 
     def ensure_google_auth(self):
         """
-        Thin wrapper: if already marked authenticated in session => return True.
-        Otherwise call google_services() to either start the OAuth flow (which will st.stop())
-        or finish it (when code present) and set session_state accordingly.
+        غلاف رقيق: إذا تم تمييزه كمصادق بالفعل في الجلسة => إرجاع True.
+        وإلا استدعاء google_services() إما لبدء تدفق OAuth (والذي سيتوقف st.stop())
+        أو إنهائه (عند وجود الكود) وتعيين session_state وفقًا لذلك.
         """
-        # If already authenticated in session, ensure services are available
+        # إذا تم المصادقة بالفعل في الجلسة، تأكد من توفر الخدمات
         if st.session_state.get("google_authenticated"):
             return True
     
         try:
-            # This will either:
-            #  - show auth link + st.stop() (if no code present) OR
-            #  - exchange code and return services (if code present / or creds in session)
+            # سيقوم هذا إما بـ:
+            #  - عرض رابط المصادقة + st.stop() (إذا لم يكن هناك كود حاضر) OR
+            #  - تبادل الكود وإرجاع الخدمات (إذا كان الكود حاضرًا / أو بيانات الاعتماد في الجلسة)
             gmail, calendar, drive, sheets, forms = google_services()
-            # successful -> mark session as authenticated
+            # نجح -> وضع علامة على الجلسة كمصادقة
             st.session_state["google_authenticated"] = True
-            # Optionally keep a flag or minimal info about services; we avoid storing client objects permanently
+            # اختياريًا الاحتفاظ بعلم أو معلومات دنيا حول الخدمات؛ نتجنب تخزين كائنات العميل بشكل دائم
             st.session_state["google_services_ready"] = True
             return True
         except FileNotFoundError:
             st.error("⚠️ يرجى رفع ملف client_secret.json أولاً لتفعيل الدخول.")
             return False
         except Exception as e:
-            # google_services already shows a user-friendly message for many errors
+            # google_services تعرض بالفعل رسالة سهلة للمستخدم للعديد من الأخطاء
             return False
+
     def add_logout_button(self):
-        """Add a logout button to clear authentication"""
-        if st.sidebar.button("🚪 Logout"):
-            # Clear session state
+        """إضافة زر تسجيل الخروج لمسح المصادقة"""
+        if st.sidebar.button("🚪 تسجيل الخروج"):
+            # مسح حالة الجلسة
             if 'google_creds' in st.session_state:
                 del st.session_state.google_creds
             
-            # Clear token file
+            # مسح ملف الرمز
             if os.path.exists("token.json"):
                 os.remove("token.json")
             
-            st.success("Logged out successfully!")
+            st.success("تم تسجيل الخروج بنجاح!")
             st.rerun()
 
     def display_candidate_details(self, candidate: Candidate):
@@ -776,7 +794,7 @@ class ATSApp:
                 if candidate_folder_id:
                     st.write("**مجلد المرشح على جوجل درايف:**", f"[فتح المجلد](https://drive.google.com/drive/folders/{candidate_folder_id})")
         
-        # Interview Questions Section
+        # قسم أسئلة المقابلة
         with st.expander("❓ أسئلة المقابلة", expanded=True):
             questions_content = self.get_interview_questions(candidate)
             if questions_content.startswith("Error") or "not found" in questions_content:
@@ -785,7 +803,7 @@ class ATSApp:
                 formatted_questions = self.format_questions_as_markdown(questions_content)
                 st.markdown(formatted_questions)
         
-        # Regenerate Questions Section - FIXED INDENTATION
+        # قسم إعادة إنشاء الأسئلة
         with st.expander("🔄 إعادة إنشاء أسئلة المقابلة"):
             st.write("**خيارات إنشاء الأسئلة:**")
             col1, col2 = st.columns(2)
@@ -797,7 +815,7 @@ class ATSApp:
                     "both": "إنشاء جديد حسب الاثنين معاً"
                 }
 
-                # ✅ Wrap in form to avoid re-run conflict
+                # ✅ التفاف في نموذج لتجنب تعارض إعادة التشغيل
                 with st.form(key=f"regen_form_{candidate.email}"):
                     selected_mode = st.selectbox(
                         "اختر طريقة الإنشاء:",
@@ -836,61 +854,61 @@ class ATSApp:
 def main():
     st.sidebar.title("📋 نظام التوظيف الذكي")
 
-    # Ensure no persistent token file exists on disk (double-safety)
+    # التأكد من عدم وجود ملف رمز ثابت على القرص (سلامة مزدوجة)
     if os.path.exists("token.json"):
         try:
             os.remove("token.json")
         except Exception:
             pass
 
-    # Initialize session state on first run
+    # تهيئة حالة الجلسة في التشغيل الأول
     if "initialized" not in st.session_state:
-        # Intentionally keep this minimal and re-create anything needed afterwards
+        # الحفاظ على هذا بحد أدنى بشكل متعمد وإعادة إنشاء أي شيء مطلوب لاحقًا
         st.session_state.clear()
         st.session_state.initialized = True
         st.session_state.google_authenticated = False
         st.session_state.page = "🏠 الصفحة الرئيسية"
 
-    # Create ATSApp instance (recreate if cleared)
+    # إنشاء مثيل ATSApp (إعادة الإنشاء إذا تم مسحه)
     if "app_instance" not in st.session_state:
         st.session_state.app_instance = ATSApp()
     app = st.session_state.app_instance
 
-    # If the Google redirect returned a "code", complete auth automatically on rerun.
+    # إذا أعاد التوجيه من Google رمز "code"، أكمل المصادقة تلقائيًا عند إعادة التشغيل.
     params = st.query_params
     if not st.session_state.get("google_authenticated", False) and params.get("code"):
-        # Attempt to finish the OAuth exchange (google_services will handle token exchange)
+        # محاولة إنهاء تبادل OAuth (سيتعامل google_services مع تبادل الرمز)
         ok = app.ensure_google_auth()
         if ok:
             st.success("✅ تم تسجيل الدخول بنجاح! جاري التحميل...")
             st.balloons()
-            # Now continue to the main app UI
+            # الآن متابعة إلى واجهة المستخدم الرئيسية للتطبيق
             st.rerun()
         else:
             st.error("❌ فشل إتمام تسجيل الدخول. تأكد من إعدادات OAuth (redirect URI) ثم حاول مجدداً.")
-            # clear params to allow retry
+            # مسح المعلمات للسماح بإعادة المحاولة
             st.query_params.clear()
 
-    # If still not authenticated, show the login button (user clicks this to start OAuth)
+    # إذا لم يتم المصادقة بعد، عرض زر تسجيل الدخول (ينقر المستخدم على هذا لبدء OAuth)
     if not st.session_state.get("google_authenticated", False):
         st.title("🔐 تسجيل الدخول")
         st.write("يرجى تسجيل الدخول عبر Google للمتابعة إلى نظام التوظيف الذكي.")
         if st.button("تسجيل الدخول باستخدام Google"):
-            # Start the OAuth flow. google_services() will show the auth link and st.stop()
+            # بدء تدفق OAuth. سيعرض google_services() رابط المصادقة وst.stop()
             app.ensure_google_auth()
-            # ensure_google_auth will either st.stop() (if starting) or return True (if already code present)
+            # ensure_google_auth سيتوقف إما st.stop() (إذا بدأ) أو يعود True (إذا كان الرمز حاضرًا بالفعل)
             return
         return
 
-    # ---------------- App UI after successful login ----------------
+    # ---------------- واجهة المستخدم للتطبيق بعد تسجيل الدخول الناجح ----------------
     page = st.sidebar.radio(
-        "اختر الصفحة",
+        "اختر الصفحة:",
         ["🏠 الصفحة الرئيسية", "📊 لوحة التحكم"],
         index=["🏠 الصفحة الرئيسية", "📊 لوحة التحكم"].index(st.session_state.get("page", "🏠 الصفحة الرئيسية"))
     )
     st.session_state.page = page
 
-    # Example: ensure services are available (they are created in google_services and indicated by session flag)
+    # مثال: التأكد من توفر الخدمات (يتم إنشاؤها في google_services ويتم الإشارة إليها بواسطة علم الجلسة)
     if st.session_state.get("google_services_ready"):
         st.sidebar.success("✅ تم تهيئة خدمات Google بنجاح")
 
@@ -901,12 +919,12 @@ def main():
 
         with st.form("home_form"):
             st.subheader("📧 بيانات الموارد البشرية")
-            hr_email = st.text_input("بريد الموارد البشرية (HR Email)")
-            form_id = st.text_input("معرف نموذج Google Form")
+            hr_email = st.text_input("بريد الموارد البشرية (HR Email)", placeholder="أدخل البريد الإلكتروني للموارد البشرية")
+            form_id = st.text_input("معرف نموذج Google Form", placeholder="أدخل معرف النموذج")
 
             st.subheader("🤖 إعداد الذكاء الاصطناعي")
             model_choice = st.selectbox("اختر نموذج الذكاء الاصطناعي:", ["Gemini", "OpenAI"])
-            api_key = st.text_input("API Key", type="password")
+            api_key = st.text_input("مفتاح API", type="password", placeholder="أدخل مفتاح API")
             
 
             submitted = st.form_submit_button("➡️ متابعة إلى لوحة التحكم")
@@ -951,7 +969,7 @@ def main():
             st.header("⚙️ إعدادات الوظيفة")  
             with st.form("config_form"):
                 st.subheader("📄 تفاصيل الوظيفة")
-                job_id = st.text_input("معرف الوظيفة")
+                job_id = st.text_input("معرف الوظيفة", placeholder="أدخل معرف الوظيفة")
 
                 enable_city_filter = st.checkbox(
                     "تفعيل تصفية المدن", 
@@ -967,10 +985,11 @@ def main():
                 job_cities = st.multiselect(
                     "🏙️ المدن المطلوبة",
                     all_city_options,
-                    default=current_job_cities
+                    default=current_job_cities,
+                    help="اختر المدن المطلوبة للوظيفة"
                 )
-                new_city = st.text_input("➕ أضف مدينة جديدة (اختياري):")
-                job_requirements = st.text_area("🧾 متطلبات الوظيفة", height=100)
+                new_city = st.text_input("➕ أضف مدينة جديدة (اختياري):", placeholder="أدخل اسم مدينة جديدة")
+                job_requirements = st.text_area("🧾 متطلبات الوظيفة", height=100, placeholder="أدخل متطلبات الوظيفة...")
 
                 st.subheader("🧠 خيارات الاختبار")
                 send_tests_enabled = st.radio("هل تريد إرسال اختبارات للمرشحين؟", ["نعم", "لا"], index=0)
@@ -1070,31 +1089,32 @@ def main():
             st.header("نظرة عامة على خط التوظيف")
             if filtered_candidates:
                 app.display_metrics(filtered_candidates)
-                st.subheader("📅 حالة المرشحين")
+                st.subheader("📊 حالة المرشحين")
                 status_data = []
                 for candidate in filtered_candidates:
                     status_data.append({
-                        "المرشح": candidate.name or candidate.email,
+                        "الاسم": candidate.name or "غير معروف",
+                        "البريد الإلكتروني": candidate.email,
                         "المدينة": candidate.city or "غير معروف",
-                        "الحالة": candidate.status,
-                        "تقييم السيرة الذاتية": candidate.cv_score or 0,
-                        "تقييم الاختبار": candidate.test_score or 0,
-                        "التقييم الكلي": candidate.overall_score or 0
+                        "الحالة": app.get_arabic_status(candidate.status),
+                        "تقييم السيرة": candidate.cv_score or 0,
+                        "نتيجة الاختبار": candidate.test_score or 0,
+                        "التقييم النهائي": candidate.overall_score or 0
                     })
                 if status_data:
                     df = pd.DataFrame(status_data)
                     st.dataframe(df, use_container_width=True)
                     
-                    # Show filtering summary
+                    # عرض ملخص التصفية
                     if len(filtered_candidates) != len(all_candidates):
                         st.info(f"💡 يتم عرض {len(filtered_candidates)} مرشح من أصل {len(all_candidates)} بعد التصفية")
             else:
                 st.info("لا يوجد مرشحين. قم بتشغيل الخط أو التحديث.")
 
         with tab2:
-            st.header("إدارة المرشحين")
+            st.header("👥 إدارة المرشحين")
             if filtered_candidates:
-                candidate_options = [f"{c.name or 'غير معروف'} ({c.email}) - {c.city or 'غير معروف'}" for c in filtered_candidates]
+                candidate_options = [f"{c.name or 'غير معروف'} - {c.email} - {c.city or 'غير معروف'}" for c in filtered_candidates]
                 selected_index = st.selectbox(
                     "اختر مرشح:",
                     range(len(filtered_candidates)),
@@ -1111,50 +1131,4 @@ def main():
 
 
 if __name__ == "__main__":
-
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
