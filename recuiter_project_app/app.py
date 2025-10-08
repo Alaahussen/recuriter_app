@@ -3,7 +3,7 @@ __import__('pysqlite3')
 import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import streamlit as st
-import os
+import o
 import json
 import pandas as pd
 from datetime import datetime
@@ -38,16 +38,25 @@ st.set_page_config(
 )
 
 # Custom CSS
+# Custom CSS - Enhanced for Arabic RTL
 st.markdown("""
 <style>
-    /* RTL Direction for all elements */
-    .main .block-container, 
-    .main-header, 
-    .metric-card, 
-    .candidate-card, 
-    .report-section {
+    /* Import Arabic font */
+    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
+    
+    /* RTL Base Styles for entire app */
+    .main .block-container {
         direction: rtl;
         text-align: right;
+        font-family: 'Tajawal', 'Segoe UI', sans-serif;
+    }
+    
+    /* RTL for all text elements */
+    .main-header, .metric-card, .candidate-card, .report-section,
+    h1, h2, h3, h4, h5, h6, p, div, span, label {
+        direction: rtl;
+        text-align: right;
+        font-family: 'Tajawal', 'Segoe UI', sans-serif;
     }
     
     .main-header {
@@ -55,63 +64,117 @@ st.markdown("""
         color: #1f77b4;
         text-align: center;
         margin-bottom: 2rem;
-        font-family: 'Tajawal', 'Segoe UI', sans-serif;
+        font-weight: 700;
     }
+    
     .metric-card {
         background-color: #f0f2f6;
         padding: 1rem;
         border-radius: 0.5rem;
         margin: 0.5rem;
         text-align: center;
-        direction: rtl;
+        border: 1px solid #e0e0e0;
     }
+    
     .candidate-card {
         background-color: #ffffff;
         padding: 1.5rem;
         border-radius: 0.5rem;
-        border-right: 4px solid #1f77b4; /* Changed from border-left to border-right */
-        border-left: none; /* Remove left border */
+        border-right: 4px solid #1f77b4;
         margin: 1rem 0;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        direction: rtl;
-        text-align: right;
     }
+    
     .status-badge {
         padding: 0.25rem 0.75rem;
         border-radius: 1rem;
         font-size: 0.8rem;
         font-weight: bold;
-        direction: rtl;
     }
+    
     .report-section {
         background-color: #f8f9fa;
         padding: 1rem;
         border-radius: 0.5rem;
         margin: 1rem 0;
+    }
+    
+    /* RTL for Streamlit specific components */
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea,
+    .stNumberInput > div > div > input,
+    .stSelectbox > div > div > div,
+    .stMultiselect > div > div > div {
+        direction: rtl;
+        text-align: right;
+        font-family: 'Tajawal', sans-serif;
+    }
+    
+    /* RTL for buttons */
+    .stButton > button {
+        font-family: 'Tajawal', sans-serif;
+    }
+    
+    /* RTL for radio buttons */
+    .stRadio > label {
+        direction: rtl;
+        text-align: right;
+        padding-right: 20px;
+    }
+    
+    /* RTL for checkboxes */
+    .stCheckbox > label {
+        direction: rtl;
+        text-align: right;
+        padding-right: 20px;
+    }
+    
+    /* RTL for sidebar */
+    [data-testid="stSidebar"] {
         direction: rtl;
         text-align: right;
     }
     
-    /* Additional RTL specific styles */
-    .candidate-card h3, 
-    .candidate-card p, 
-    .report-section h3, 
-    .report-section p {
+    [data-testid="stSidebar"] .stRadio > label,
+    [data-testid="stSidebar"] .stCheckbox > label,
+    [data-testid="stSidebar"] .stButton > button {
+        direction: rtl;
         text-align: right;
-        margin-right: 0;
-        margin-left: auto;
     }
     
-    /* RTL alignment for metric numbers */
-    .metric-card .number {
-        text-align: center;
-        font-family: 'Tajawal', sans-serif;
+    /* RTL for tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        direction: rtl;
     }
     
-    /* RTL floating elements */
-    .candidate-card::before {
-        right: 0;
-        left: auto;
+    /* RTL for dataframes */
+    .dataframe {
+        direction: rtl;
+    }
+    
+    .dataframe th {
+        text-align: right !important;
+    }
+    
+    /* RTL for alerts and info boxes */
+    .stAlert {
+        direction: rtl;
+        text-align: right;
+    }
+    
+    /* RTL for form labels */
+    .stForm {
+        direction: rtl;
+    }
+    
+    /* RTL for selectbox dropdown */
+    .stSelectbox [data-baseweb="select"] div {
+        text-align: right;
+    }
+    
+    /* RTL for multiselect */
+    .stMultiSelect [data-baseweb="select"] div {
+        text-align: right;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1050,6 +1113,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
