@@ -1,6 +1,6 @@
 # streamlit_app.py
 __import__('pysqlite3')
-import sy
+import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import streamlit as st
 import os
@@ -749,7 +749,7 @@ class ATSApp:
                 st.markdown(f'<div class="report-section">{report_content}</div>', unsafe_allow_html=True)
 
 
-def main()
+def main():
     st.sidebar.title("📋 نظام التوظيف الذكي")
 
     # --- Always start with fresh session ---
@@ -1010,6 +1010,7 @@ def main()
 if __name__ == "__main__":
 
     main()
+
 
 
 
