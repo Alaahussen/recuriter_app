@@ -749,53 +749,48 @@ class ATSApp:
                 st.markdown(f'<div class="report-section">{report_content}</div>', unsafe_allow_html=True)
 
 
-def main():
+def main()
     st.sidebar.title("📋 نظام التوظيف الذكي")
 
-    # --- Page Initialization ---
-    if "page" not in st.session_state:
+    # --- Always start with fresh session ---
+    if "initialized" not in st.session_state:
+        # Clear old auth or token data on app start
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        if os.path.exists("token.json"):
+            os.remove("token.json")
+        st.session_state.initialized = True
+        st.session_state.google_authenticated = False
         st.session_state.page = "🏠 الصفحة الرئيسية"
 
+    # --- Create ATS App instance ---
+    if "app_instance" not in st.session_state:
+        st.session_state.app_instance = ATSApp()
+    app = st.session_state.app_instance
+
+    # --- Force login every new app session ---
+    if not st.session_state.google_authenticated:
+        st.title("🔐 تسجيل الدخول")
+        st.write("يرجى تسجيل الدخول عبر Google للمتابعة إلى نظام التوظيف الذكي.")
+
+        if st.button("تسجيل الدخول باستخدام Google"):
+            if app.ensure_google_auth():  # This handles OAuth process
+                st.session_state.google_authenticated = True
+                st.session_state.page = "🏠 الصفحة الرئيسية"
+                st.success("✅ تم تسجيل الدخول بنجاح! جاري التحميل...")
+                st.balloons()
+                st.rerun()
+            else:
+                st.error("❌ فشل تسجيل الدخول. حاول مرة أخرى.")
+        return
+
+    # --- Sidebar Navigation (After login only) ---
     page = st.sidebar.radio(
         "اختر الصفحة",
         ["🏠 الصفحة الرئيسية", "📊 لوحة التحكم"],
         index=["🏠 الصفحة الرئيسية", "📊 لوحة التحكم"].index(st.session_state.page)
     )
-
     st.session_state.page = page
-
-    # --- Initialize App Instance ---
-    if "app_instance" not in st.session_state:
-        st.session_state.app_instance = ATSApp()
-    app = st.session_state.app_instance
-
-    # --- Logout Button ---
-    if st.session_state.get('google_authenticated', False):
-        if st.sidebar.button("🚪 تسجيل الخروج", type="secondary"):
-            for key in list(st.session_state.keys()):
-                if 'google' in key.lower() or 'auth' in key.lower() or key in ["app_instance", "page"]:
-                    del st.session_state[key]
-            # Remove any token file
-            if os.path.exists("token.json"):
-                os.remove("token.json")
-
-            st.success("✅ تم تسجيل الخروج بنجاح!")
-            st.session_state.page = "🏠 الصفحة الرئيسية"
-            st.rerun()
-
-    # --- Google Authentication ---
-    if not st.session_state.get("google_authenticated", False):
-        if not app.ensure_google_auth():
-            return
-        else:
-            # Login succeeded
-            st.session_state.google_authenticated = True
-            st.session_state.page = "🏠 الصفحة الرئيسية"
-            st.success("✅ تم تسجيل الدخول بنجاح! يمكنك الآن الانتقال إلى الصفحة الرئيسية.")
-            st.balloons()
-            return  # stop execution until rerun
-
-
     # --- الصفحة الرئيسية ---
     if page == "🏠 الصفحة الرئيسية":
         st.markdown('<h1 class="main-header">🏠 الصفحة الرئيسية</h1>', unsafe_allow_html=True)
@@ -872,7 +867,7 @@ def main():
                     default=current_job_cities
                 )
                 new_city = st.text_input("➕ أضف مدينة جديدة (اختياري):")
-                job_requirements = st.text_area("🧾 متطلبات الوظيفة", value=os.getenv("JOB_REQUIREMENTS", ""), height=100)
+                job_requirements = st.text_area("🧾 متطلبات الوظيفة", height=100)
 
                 st.subheader("🧠 خيارات الاختبار")
                 send_tests_enabled = st.radio("هل تريد إرسال اختبارات للمرشحين؟", ["نعم", "لا"], index=0)
@@ -1015,6 +1010,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
