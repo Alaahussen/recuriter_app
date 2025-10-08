@@ -739,8 +739,8 @@ def main():
 
     # --- Always start fresh every run ---
     # Clear all session data and delete token file (force re-login each time)
-    if os.path.exists("token.json"):
-        os.remove("token.json")
+    #if os.path.exists("token.json"):
+        #os.remove("token.json")
 
     if "initialized" not in st.session_state:
         st.session_state.clear()
@@ -997,6 +997,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
