@@ -603,35 +603,31 @@ class ATSApp:
             st.metric("Tests Completed", tested)
 
     def ensure_google_auth(self):
-        """Ensure the user is authenticated with Google and initialize the services."""
-        token_path = "token.json"
+        """
+        Thin wrapper: if already marked authenticated in session => return True.
+        Otherwise call google_services() to either start the OAuth flow (which will st.stop())
+        or finish it (when code present) and set session_state accordingly.
+        """
+        # If already authenticated in session, ensure services are available
+        if st.session_state.get("google_authenticated"):
+            return True
     
-        # 🔄 Always remove any stored token (no saving allowed)
-        if os.path.exists(token_path):
-            os.remove(token_path)
-    
-        # ✅ If already authenticated in session
-        if st.session_state.get('google_authenticated', False):
-            try:
-                gmail, calendar, drive, sheets, forms = google_services()
-                return True
-            except Exception as e:
-                st.error(f"⚠️ فشل في تهيئة خدمات Google: {e}")
-                st.session_state.google_authenticated = False
-                return False
-    
-        # 🚀 If not authenticated yet, trigger new OAuth flow
         try:
+            # This will either:
+            #  - show auth link + st.stop() (if no code present) OR
+            #  - exchange code and return services (if code present / or creds in session)
             gmail, calendar, drive, sheets, forms = google_services()
-            st.session_state.google_authenticated = True
+            # successful -> mark session as authenticated
+            st.session_state["google_authenticated"] = True
+            # Optionally keep a flag or minimal info about services; we avoid storing client objects permanently
+            st.session_state["google_services_ready"] = True
             return True
         except FileNotFoundError:
             st.error("⚠️ يرجى رفع ملف client_secret.json أولاً لتفعيل الدخول.")
             return False
         except Exception as e:
-            st.error(f"حدث خطأ أثناء محاولة تسجيل الدخول: {e}")
+            # google_services already shows a user-friendly message for many errors
             return False
-
     def add_logout_button(self):
         """Add a logout button to clear authentication"""
         if st.sidebar.button("🚪 Logout"):
@@ -737,49 +733,66 @@ class ATSApp:
 def main():
     st.sidebar.title("📋 نظام التوظيف الذكي")
 
-    # --- Always start fresh every run ---
-    # Clear all session data and delete token file (force re-login each time)
-    #if os.path.exists("token.json"):
-        #os.remove("token.json")
+    # Ensure no persistent token file exists on disk (double-safety)
+    if os.path.exists("token.json"):
+        try:
+            os.remove("token.json")
+        except Exception:
+            pass
 
+    # Initialize session state on first run
     if "initialized" not in st.session_state:
+        # Intentionally keep this minimal and re-create anything needed afterwards
         st.session_state.clear()
         st.session_state.initialized = True
         st.session_state.google_authenticated = False
         st.session_state.page = "🏠 الصفحة الرئيسية"
 
-    # --- Create ATS App instance ---
+    # Create ATSApp instance (recreate if cleared)
     if "app_instance" not in st.session_state:
         st.session_state.app_instance = ATSApp()
     app = st.session_state.app_instance
 
-    # --- Force login every new session ---
-    if not st.session_state.google_authenticated:
+    # If the Google redirect returned a "code", complete auth automatically on rerun.
+    params = st.experimental_get_query_params()
+    if not st.session_state.get("google_authenticated", False) and params.get("code"):
+        # Attempt to finish the OAuth exchange (google_services will handle token exchange)
+        ok = app.ensure_google_auth()
+        if ok:
+            st.success("✅ تم تسجيل الدخول بنجاح! جاري التحميل...")
+            st.balloons()
+            # Now continue to the main app UI
+            st.rerun()
+        else:
+            st.error("❌ فشل إتمام تسجيل الدخول. تأكد من إعدادات OAuth (redirect URI) ثم حاول مجدداً.")
+            # clear params to allow retry
+            st.experimental_set_query_params()
+
+    # If still not authenticated, show the login button (user clicks this to start OAuth)
+    if not st.session_state.get("google_authenticated", False):
         st.title("🔐 تسجيل الدخول")
         st.write("يرجى تسجيل الدخول عبر Google للمتابعة إلى نظام التوظيف الذكي.")
-
-        # Show login button only
         if st.button("تسجيل الدخول باستخدام Google"):
-            if app.ensure_google_auth():  # This runs google_services()
-                st.session_state.google_authenticated = True
-                st.session_state.page = "🏠 الصفحة الرئيسية"
-                st.success("✅ تم تسجيل الدخول بنجاح! جاري التحميل...")
-                st.balloons()
-                st.rerun()
-            else:
-                st.error("❌ فشل تسجيل الدخول. حاول مرة أخرى.")
+            # Start the OAuth flow. google_services() will show the auth link and st.stop()
+            app.ensure_google_auth()
+            # ensure_google_auth will either st.stop() (if starting) or return True (if already code present)
+            return
         return
 
-    # --- Sidebar Navigation (After login only) ---
+    # ---------------- App UI after successful login ----------------
     page = st.sidebar.radio(
         "اختر الصفحة",
         ["🏠 الصفحة الرئيسية", "📊 لوحة التحكم"],
-        index=["🏠 الصفحة الرئيسية", "📊 لوحة التحكم"].index(st.session_state.page)
+        index=["🏠 الصفحة الرئيسية", "📊 لوحة التحكم"].index(st.session_state.get("page", "🏠 الصفحة الرئيسية"))
     )
     st.session_state.page = page
 
+    # Example: ensure services are available (they are created in google_services and indicated by session flag)
+    if st.session_state.get("google_services_ready"):
+        st.sidebar.success("✅ تم تهيئة خدمات Google بنجاح")
+
     # --- الصفحة الرئيسية ---
-    if page == "🏠 الصفحة الرئيسية":
+    if page == "🏠 الصفحة الرئيسية"
         st.markdown('<h1 class="main-header">🏠 الصفحة الرئيسية</h1>', unsafe_allow_html=True)
         st.write("قم بإعداد الاتصال بالنظام قبل البدء في متابعة عملية التوظيف")
 
@@ -997,6 +1010,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
