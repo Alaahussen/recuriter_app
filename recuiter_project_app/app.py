@@ -602,7 +602,7 @@ class ATSApp:
         with col4:
             st.metric("Tests Completed", tested)
 
-    def ensure_google_auth(self)
+    def ensure_google_auth(self):
         """Ensure the user is authenticated with Google and initialize the services."""
         token_path = "token.json"
     
@@ -997,6 +997,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
