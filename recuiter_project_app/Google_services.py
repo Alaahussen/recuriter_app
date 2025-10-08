@@ -17,7 +17,7 @@ SCOPES = [
 ]
 
 # ---------- google_services ----------
-def google_services() -> Tuple[Any, Any, Any, Any, Any]
+def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     """
     Two-mode behavior:
       - If there's no 'code' query param and no in-session creds: generate auth_url, show link and stop.
@@ -96,6 +96,7 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]
     except Exception as e:
         st.error(f"❌ فشل تهيئة خدمات Google: {e}")
         raise
+
 
 
 
