@@ -752,13 +752,13 @@ class ATSApp:
 def main():
     st.sidebar.title("📋 نظام التوظيف الذكي")
 
-    # --- Always start with fresh session ---
+    # --- Always start fresh every run ---
+    # Clear all session data and delete token file (force re-login each time)
+    if os.path.exists("token.json"):
+        os.remove("token.json")
+
     if "initialized" not in st.session_state:
-        # Clear old auth or token data on app start
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        if os.path.exists("token.json"):
-            os.remove("token.json")
+        st.session_state.clear()
         st.session_state.initialized = True
         st.session_state.google_authenticated = False
         st.session_state.page = "🏠 الصفحة الرئيسية"
@@ -768,13 +768,14 @@ def main():
         st.session_state.app_instance = ATSApp()
     app = st.session_state.app_instance
 
-    # --- Force login every new app session ---
+    # --- Force login every new session ---
     if not st.session_state.google_authenticated:
         st.title("🔐 تسجيل الدخول")
         st.write("يرجى تسجيل الدخول عبر Google للمتابعة إلى نظام التوظيف الذكي.")
 
+        # Show login button only
         if st.button("تسجيل الدخول باستخدام Google"):
-            if app.ensure_google_auth():  # This handles OAuth process
+            if app.ensure_google_auth():  # This runs google_services()
                 st.session_state.google_authenticated = True
                 st.session_state.page = "🏠 الصفحة الرئيسية"
                 st.success("✅ تم تسجيل الدخول بنجاح! جاري التحميل...")
@@ -791,6 +792,7 @@ def main():
         index=["🏠 الصفحة الرئيسية", "📊 لوحة التحكم"].index(st.session_state.page)
     )
     st.session_state.page = page
+
     # --- الصفحة الرئيسية ---
     if page == "🏠 الصفحة الرئيسية":
         st.markdown('<h1 class="main-header">🏠 الصفحة الرئيسية</h1>', unsafe_allow_html=True)
@@ -1010,6 +1012,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
