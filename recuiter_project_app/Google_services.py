@@ -110,7 +110,7 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
                 st.stop()
 
     # 3️⃣ Build service clients
-    try
+    try:
         gmail = build('gmail', 'v1', credentials=creds)
         calendar = build('calendar', 'v3', credentials=creds)
         drive = build('drive', 'v3', credentials=creds)
@@ -123,6 +123,7 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     except Exception as e:
         st.error(f"❌ Failed to initialize Google services: {str(e)}")
         st.stop()
+
 
 
 
