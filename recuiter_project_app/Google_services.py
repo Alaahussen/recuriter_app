@@ -21,7 +21,7 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     Authorize Google APIs using OAuth2 with Streamlit Secrets.
     Returns: (gmail, calendar, drive, sheets, forms)
     """
-    creds = None
+    creds = Non
     token_path = "token.json"
 
     # 1️⃣ Load saved token if available
@@ -123,6 +123,7 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     except Exception as e:
         st.error(f"❌ Failed to initialize Google services: {str(e)}")
         st.stop()
+
 
 
 
