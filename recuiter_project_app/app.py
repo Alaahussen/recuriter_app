@@ -1,6 +1,6 @@
 # streamlit_app.py
 __import__('pysqlite3')
-import s
+import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import streamlit as st
 import os
@@ -792,7 +792,7 @@ def main():
         st.sidebar.success("✅ تم تهيئة خدمات Google بنجاح")
 
     # --- الصفحة الرئيسية ---
-    if page == "🏠 الصفحة الرئيسية"
+    if page == "🏠 الصفحة الرئيسية":
         st.markdown('<h1 class="main-header">🏠 الصفحة الرئيسية</h1>', unsafe_allow_html=True)
         st.write("قم بإعداد الاتصال بالنظام قبل البدء في متابعة عملية التوظيف")
 
@@ -1010,6 +1010,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
