@@ -8,7 +8,9 @@ from google_auth_oauthlib.flow import Flow
 from google.auth.transport.requests import Request
 
 SCOPES = [
-    'https://www.googleapis.com/auth/gmail.modify',
+    #'https://www.googleapis.com/auth/gmail.modify',
+    'https://www.googleapis.com/auth/gmail.readonly',      
+    'https://www.googleapis.com/auth/gmail.send', 
     'https://www.googleapis.com/auth/calendar',
     'https://www.googleapis.com/auth/drive',
     'https://www.googleapis.com/auth/spreadsheets',
@@ -96,5 +98,6 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     except Exception as e:
         st.error(f"❌ فشل تهيئة خدمات Google: {e}")
         raise
+
 
 
