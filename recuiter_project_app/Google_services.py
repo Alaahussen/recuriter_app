@@ -7,6 +7,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from google.auth.transport.requests import Request
 
+# ---------- Google Scopes ----------
 SCOPES = [
     'https://www.googleapis.com/auth/gmail.modify',
     'https://www.googleapis.com/auth/calendar',
@@ -16,78 +17,79 @@ SCOPES = [
     'https://www.googleapis.com/auth/forms.responses.readonly'
 ]
 
+
 # ---------- google_services ----------
 def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     """
-    Two-mode behavior:
-      - If there's no 'code' query param and no in-session creds: generate auth_url, show link and stop.
-      - If there's a 'code' query param (or creds already in session), exchange it and return service clients.
-    DOES NOT save any token.json to disk (keeps creds only in session_state).
+    Handles Google OAuth flow in Streamlit.
+    - Does NOT save any token.json file (session-only).
+    - Uses st.query_params for new Streamlit versions.
     """
-    # Prefer credentials stored in session (kept only in memory for the running session)
     creds = None
+
+    # --- Restore in-memory credentials if available ---
     if st.session_state.get("creds_json"):
         try:
-            creds = Credentials.from_authorized_user_info(json.loads(st.session_state["creds_json"]), SCOPES)
-            # refresh if needed (still in-memory)
+            creds = Credentials.from_authorized_user_info(
+                json.loads(st.session_state["creds_json"]),
+                SCOPES
+            )
             if creds.expired and creds.refresh_token:
                 creds.refresh(Request())
                 st.session_state["creds_json"] = creds.to_json()
         except Exception:
             creds = None
 
-    # Load client config (move to st.secrets in production if you prefer)
+    # --- OAuth client configuration ---
     client_config = {
         "web": {
             "client_id": "1049951738822-tikfl78a21u8j8drca04b71ec4q2e3qo.apps.googleusercontent.com",
             "client_secret": "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",
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
-            # Make sure this redirect URI matches your OAuth client configuration in Google Cloud
             "redirect_uris": ["https://aicruiter.streamlit.app"]
         }
     }
     redirect_uri = client_config["web"]["redirect_uris"][0]
 
-    # Fetch query params (Streamlit API)
+    # --- Get query parameters safely ---
     params = st.query_params
     code_value = params.get("code")
 
-    # If we don't yet have credentials, either start OAuth (show link) or finish it using code
+    # --- Start or complete the OAuth flow ---
     if not creds:
         if code_value:
-            code_list = [code_value] if not isinstance(code_value, list) else code_value
-        else:
-            code_list = None
             try:
-                flow = Flow.from_client_config(client_config, scopes=SCOPES, redirect_uri=redirect_uri)
-                # Exchange the code for credentials
-                flow.fetch_token(code=code)
+                # Exchange the authorization code for access token
+                flow = Flow.from_client_config(
+                    client_config, scopes=SCOPES, redirect_uri=redirect_uri
+                )
+                flow.fetch_token(code=code_value)
                 creds = flow.credentials
 
-                # Keep credentials in-memory only (don't write token.json).
+                # Store creds in session only (no token.json)
                 st.session_state["creds_json"] = creds.to_json()
 
-                # Clean up URL query params so we don't repeat exchange on subsequent reruns
-                st.query_params()
+                # Clean up query params so reruns don't repeat exchange
+                st.query_params.clear()
             except Exception as e:
-                # Show the underlying error to help debugging (redirect mismatch / invalid code, etc.)
                 st.error(f"❌ خطأ أثناء إتمام التفويض: {e}")
-                raise
+                st.stop()
         else:
-            # No code and no creds -> start OAuth: generate auth link and halt for the user to click it
-            flow = Flow.from_client_config(client_config, scopes=SCOPES, redirect_uri=redirect_uri)
-            auth_url, _ = flow.authorization_url(prompt="consent", access_type="offline")
-            st.markdown("### 🔐 Google Authentication Required")
-            st.markdown(
-                "اضغط على الرابط التالي لتفويض هذا التطبيق بالوصول إلى حساب Google الخاص بك:"
+            # No credentials or code yet — start OAuth
+            flow = Flow.from_client_config(
+                client_config, scopes=SCOPES, redirect_uri=redirect_uri
             )
+            auth_url, _ = flow.authorization_url(
+                prompt="consent", access_type="offline"
+            )
+            st.markdown("### 🔐 Google Authentication Required")
+            st.markdown("اضغط على الرابط التالي لتفويض هذا التطبيق بالوصول إلى حساب Google الخاص بك:")
             st.markdown(f"[👉 اكمل التفويض هنا]({auth_url})")
-            st.info("بعد التفويض سيتم إعادة التوجيه إلى هذه الصفحة — انتظر إعادة التحميل.")
-            # `st.stop()` halts execution here so user can click the link and return with ?code=...
+            st.info("بعد التفويض سيتم إعادة التوجيه إلى هذه الصفحة تلقائيًا.")
             st.stop()
 
-    # Build service clients using the in-memory credentials
+    # --- Build service clients ---
     try:
         gmail = build("gmail", "v1", credentials=creds)
         calendar = build("calendar", "v3", credentials=creds)
@@ -98,6 +100,3 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     except Exception as e:
         st.error(f"❌ فشل تهيئة خدمات Google: {e}")
         raise
-
-
-
