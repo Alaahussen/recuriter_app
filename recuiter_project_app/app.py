@@ -1,6 +1,6 @@
 # streamlit_app.py
 __import__('pysqlite3')
-import sys
+import s
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import streamlit as st
 import os
@@ -754,7 +754,7 @@ def main():
     app = st.session_state.app_instance
 
     # If the Google redirect returned a "code", complete auth automatically on rerun.
-    params = st.experimental_get_query_params()
+    params = st.query_params
     if not st.session_state.get("google_authenticated", False) and params.get("code"):
         # Attempt to finish the OAuth exchange (google_services will handle token exchange)
         ok = app.ensure_google_auth()
@@ -766,7 +766,7 @@ def main():
         else:
             st.error("❌ فشل إتمام تسجيل الدخول. تأكد من إعدادات OAuth (redirect URI) ثم حاول مجدداً.")
             # clear params to allow retry
-            st.experimental_set_query_params()
+            st.query_params.clear()
 
     # If still not authenticated, show the login button (user clicks this to start OAuth)
     if not st.session_state.get("google_authenticated", False):
@@ -1010,6 +1010,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
