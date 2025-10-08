@@ -40,11 +40,22 @@ st.set_page_config(
 # Custom CSS
 st.markdown("""
 <style>
+    /* RTL Direction for all elements */
+    .main .block-container, 
+    .main-header, 
+    .metric-card, 
+    .candidate-card, 
+    .report-section {
+        direction: rtl;
+        text-align: right;
+    }
+    
     .main-header {
         font-size: 3rem;
         color: #1f77b4;
         text-align: center;
         margin-bottom: 2rem;
+        font-family: 'Tajawal', 'Segoe UI', sans-serif;
     }
     .metric-card {
         background-color: #f0f2f6;
@@ -52,26 +63,55 @@ st.markdown("""
         border-radius: 0.5rem;
         margin: 0.5rem;
         text-align: center;
+        direction: rtl;
     }
     .candidate-card {
         background-color: #ffffff;
         padding: 1.5rem;
         border-radius: 0.5rem;
-        border-left: 4px solid #1f77b4;
+        border-right: 4px solid #1f77b4; /* Changed from border-left to border-right */
+        border-left: none; /* Remove left border */
         margin: 1rem 0;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        direction: rtl;
+        text-align: right;
     }
     .status-badge {
         padding: 0.25rem 0.75rem;
         border-radius: 1rem;
         font-size: 0.8rem;
         font-weight: bold;
+        direction: rtl;
     }
     .report-section {
         background-color: #f8f9fa;
         padding: 1rem;
         border-radius: 0.5rem;
         margin: 1rem 0;
+        direction: rtl;
+        text-align: right;
+    }
+    
+    /* Additional RTL specific styles */
+    .candidate-card h3, 
+    .candidate-card p, 
+    .report-section h3, 
+    .report-section p {
+        text-align: right;
+        margin-right: 0;
+        margin-left: auto;
+    }
+    
+    /* RTL alignment for metric numbers */
+    .metric-card .number {
+        text-align: center;
+        font-family: 'Tajawal', sans-serif;
+    }
+    
+    /* RTL floating elements */
+    .candidate-card::before {
+        right: 0;
+        left: auto;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1010,6 +1050,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
 
 
