@@ -49,7 +49,7 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
             "redirect_uris": ["https://aicruiter.streamlit.app"]
         }
     }
-    redirect_uri = client_config["web"]["redirect_uris"][0
+    redirect_uri = client_config["web"]["redirect_uris"][0]
 
     # Use the new st.query_params API
     params = st.query_params
@@ -98,6 +98,7 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     except Exception as e:
         st.error(f"❌ فشل تهيئة خدمات Google: {e}")
         raise
+
 
 
 
