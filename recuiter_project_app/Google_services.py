@@ -69,7 +69,7 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
                 st.session_state["creds_json"] = creds.to_json()
 
                 # Clean up URL query params so we don't repeat exchange on subsequent reruns
-                st.query_params(
+                st.query_params()
             except Exception as e:
                 # Show the underlying error to help debugging (redirect mismatch / invalid code, etc.)
                 st.error(f"❌ خطأ أثناء إتمام التفويض: {e}")
@@ -98,5 +98,6 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     except Exception as e:
         st.error(f"❌ فشل تهيئة خدمات Google: {e}")
         raise
+
 
 
