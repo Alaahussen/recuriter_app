@@ -28,7 +28,7 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     if os.path.exists(token_path):
         try:
             creds = Credentials.from_authorized_user_file(token_path, SCOPES)
-            st.sidebar.success("✅ Using saved Google credentials")
+            #st.sidebar.success("✅ Using saved Google credentials")
         except Exception as e:
             st.warning(f"⚠️ Error loading saved token: {e}")
 
@@ -123,6 +123,7 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     except Exception as e:
         st.error(f"❌ Failed to initialize Google services: {str(e)}")
         st.stop()
+
 
 
 
