@@ -49,15 +49,14 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     }
     redirect_uri = client_config["web"]["redirect_uris"][0]
 
-    # Fetch query params (Streamlit API)
-    params = st.experimental_get_query_params()
-    code_list = params.get("code")  # this is a list if present
+    # Use the new st.query_params API
+    params = st.query_params
+    code = params.get("code")  # returns the first value if exists, else None
 
     # If we don't yet have credentials, either start OAuth (show link) or finish it using code
     if not creds:
-        if code_list:
+        if code:
             # We have a code -> exchange it for tokens (complete OAuth)
-            code = code_list[0]
             try:
                 flow = Flow.from_client_config(client_config, scopes=SCOPES, redirect_uri=redirect_uri)
                 # Exchange the code for credentials
@@ -68,7 +67,7 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
                 st.session_state["creds_json"] = creds.to_json()
 
                 # Clean up URL query params so we don't repeat exchange on subsequent reruns
-                st.experimental_set_query_params()
+                st.query_params.clear()
             except Exception as e:
                 # Show the underlying error to help debugging (redirect mismatch / invalid code, etc.)
                 st.error(f"❌ خطأ أثناء إتمام التفويض: {e}")
@@ -97,5 +96,3 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     except Exception as e:
         st.error(f"❌ فشل تهيئة خدمات Google: {e}")
         raise
-
-
