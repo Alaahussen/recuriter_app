@@ -26,7 +26,7 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     """
     # Prefer credentials stored in session (kept only in memory for the running session)
     creds = None
-    if st.session_state.get("creds_json")
+    if st.session_state.get("creds_json"):
         try:
             creds = Credentials.from_authorized_user_info(json.loads(st.session_state["creds_json"]), SCOPES)
             # refresh if needed (still in-memory)
@@ -96,4 +96,5 @@ def google_services() -> Tuple[Any, Any, Any, Any, Any]:
     except Exception as e:
         st.error(f"❌ فشل تهيئة خدمات Google: {e}")
         raise
+
 
