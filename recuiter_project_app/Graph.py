@@ -13,7 +13,7 @@ import os
 load_dotenv()
 
 
-def evaluate_cv_node(state: PipelineState) -> PipelineState:
+def evaluate_cv_node(state: PipelineState) -> PipelineState
     """
     Evaluate candidates based on the configured evaluation mode and update their status.
     Also syncs updates to Google Sheets if available.
@@ -36,11 +36,11 @@ def evaluate_cv_node(state: PipelineState) -> PipelineState:
         candidate.status = getattr(candidate, "status", "Pending")
 
         # --- Calculate overall score based on evaluation mode ---
+        print(evaluation_mode,candidate.test_score)
         if evaluation_mode == "تقييم السيرة الذاتية فقط":
             candidate.overall_score = candidate.cv_score
         
         elif evaluation_mode == "تقييم السيرة الذاتية والاختبار":
-            print(evaluation_mode,candidate.test_score)
             if candidate.test_score > 0:
                 candidate.overall_score = 0.6 * candidate.cv_score + 0.4 * candidate.test_score
             else:
@@ -151,6 +151,7 @@ def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السير�
     os.environ["EVALUATION_MODE"] = evaluation_mode
 
     return g.compile()
+
 
 
 
