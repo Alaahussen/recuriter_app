@@ -62,7 +62,10 @@ html, body, [class*="css"] {
 /* Sidebar inputs and labels */
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] .stRadio,
-
+[data-testid="stSidebar"] .stCheckbox 
+{ font-weight: 500; 
+font-size: 1rem; 
+color: #1e1e1e !important; }
 /* Slider styling — ensure numbers appear clearly */
 .stSlider {
     direction: ltr !important; /* keep numbers visible */
@@ -1120,6 +1123,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
