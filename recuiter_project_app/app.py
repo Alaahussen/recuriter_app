@@ -1015,7 +1015,7 @@ def main():
                     save_to_env("JOB_CITY", json.dumps(job_cities, ensure_ascii=False)) 
                     save_to_env("JOB_REQUIREMENTS", job_requirements)
                     save_to_env("INTERVIEW_THRESHOLD", str(interview_threshold))
-                    #save_to_env("HR_FROM_EMAIL", hr_email)
+                    save_to_env("EVALUATION_MODE", evaluation_mode)
 
                     # تعيين متغيرات البيئة فوراً
                     os.environ["JOB_ID"] = job_id
@@ -1023,13 +1023,13 @@ def main():
                     os.environ["JOB_REQUIREMENTS"] = job_requirements
                     os.environ["EVALUATION_MODE"] = "cv_only" if evaluation_mode == "تقييم السيرة الذاتية فقط" else "cv_and_test"
                     os.environ["INTERVIEW_THRESHOLD"] = str(interview_threshold)
-                    #os.environ["HR_FROM_EMAIL"] = hr_email
+                    os.environ["EVALUATION_MODE"] = evaluation_mode
                     
                     # تحديث حالة الجلسة
                     st.session_state["JOB_ID"] = job_id
                     st.session_state["JOB_CITY"] = job_cities
                     st.session_state["JOB_REQUIREMENTS"] = job_requirements
-                    #st.session_state["HR_FROM_EMAIL"] = hr_email
+                    st.session_state["EVALUATION_MODE"] = evaluation_mode
 
                     load_dotenv(override=True)
                     
@@ -1126,6 +1126,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
