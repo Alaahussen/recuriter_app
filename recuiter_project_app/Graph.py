@@ -120,7 +120,7 @@ def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السير�
                 return "poll_test_answers"
 
             # ✅ Candidates who now have test answers ready (need re-evaluation)
-            ready_for_eval = any(c.status in ["test_completed", "test_answered"] for c in state.candidates)
+            ready_for_eval = any(c.status in ["tested", "test_answered"] for c in state.candidates)
             if ready_for_eval:
                 return "evaluate_cv"
 
@@ -151,4 +151,5 @@ def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السير�
     os.environ["EVALUATION_MODE"] = evaluation_mode
 
     return g.compile()
+
 
