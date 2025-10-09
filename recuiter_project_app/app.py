@@ -167,7 +167,7 @@ html, body, [class*="css"] {
 .stRadio > label,
 /* Make checkboxes smaller */
 .stCheckbox input[type="checkbox"] {
-    transform: scale(0.8); /* adjust between 0.7 - 1 for desired size */
+    transform: scale(0.5); /* adjust between 0.7 - 1 for desired size */
     margin-left: 4px; /* optional: keeps alignment tidy in RTL */
 }
 
@@ -1124,6 +1124,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
