@@ -49,11 +49,10 @@ def evaluate_cv_node(state: PipelineState) -> PipelineState:
             candidate.overall_score = candidate.cv_score
 
         # --- Assign status based on threshold ---
-        if candidate.status.lower() not in ["test_sent", "tested", "classified", "received"]:
-            if candidate.overall_score >= interview_threshold:
-                candidate.status = "Pending"
-            else:
-                candidate.status = "Under Threshold"
+        if candidate.overall_score >= interview_threshold:
+            candidate.status = "Pending"
+        else:
+            candidate.status = "Under Threshold"
 
         # --- Log evaluation ---
         print(f"✅ Evaluated {getattr(candidate, 'name', 'Unknown')}: "
@@ -140,6 +139,7 @@ def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السير�
 
     os.environ["EVALUATION_MODE"] = evaluation_mode
     return g.compile()
+
 
 
 
