@@ -63,7 +63,7 @@ html, body, [class*="css"] {
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] .stRadio,
 [data-testid="stSidebar"] .stCheckbox {
-    font-weight: 500;
+    font-weight: 400;
     font-size: 1rem;
     color: #1e1e1e !important;
 }
@@ -1122,6 +1122,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
