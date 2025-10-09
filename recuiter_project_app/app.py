@@ -62,11 +62,6 @@ html, body, [class*="css"] {
 /* Sidebar inputs and labels */
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] .stRadio,
-[data-testid="stSidebar"] .stCheckbox {
-    font-weight: 400;
-    font-size: 1rem;
-    color: #1e1e1e !important;
-}
 
 /* Slider styling — ensure numbers appear clearly */
 .stSlider {
@@ -166,10 +161,11 @@ html, body, [class*="css"] {
 /* Tooltip + Radio + Checkbox */
 .stRadio > label,
 /* Make checkboxes smaller */
-.stCheckbox input[type="checkbox"] {
-    transform: scale(0.5); /* adjust between 0.7 - 1 for desired size */
-    margin-left: 4px; /* optional: keeps alignment tidy in RTL */
-}
+.stCheckbox > label {
+        direction: rtl;
+        text-align: right;
+        padding-right: 20px;
+    }
 
 </style>
 """, unsafe_allow_html=True)
@@ -1124,6 +1120,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
