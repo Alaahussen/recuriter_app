@@ -165,10 +165,12 @@ html, body, [class*="css"] {
 
 /* Tooltip + Radio + Checkbox */
 .stRadio > label,
-.stCheckbox > label {
-    direction: rtl !important;
-    text-align: right !important;
+/* Make checkboxes smaller */
+.stCheckbox input[type="checkbox"] {
+    transform: scale(0.8); /* adjust between 0.7 - 1 for desired size */
+    margin-left: 4px; /* optional: keeps alignment tidy in RTL */
 }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -1122,6 +1124,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
