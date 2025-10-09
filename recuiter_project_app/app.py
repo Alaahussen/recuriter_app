@@ -1,6 +1,6 @@
 # streamlit_app.py
 __import__('pysqlite3')
-import sys
+import s
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import streamlit as st
 import os
@@ -145,10 +145,6 @@ st.markdown("""
         direction: rtl;
     }
     
-    /* تنسيق RTL للجداول */
-    .dataframe {
-        direction: rtl;
-    }
     
     .dataframe th {
         text-align: right !important;
@@ -996,7 +992,7 @@ def main():
                 app.send_tests_enabled = True if send_tests_enabled == "نعم" else False
 
                 st.subheader("📈 حدود التقييم")
-                interview_threshold = st.slider("الحد الأدنى للمقابلة", 0, 100, int(os.getenv("INTERVIEW_THRESHOLD", 50)))
+                interview_threshold = st.slider("\u200Fالحد الأدنى للمقابلة", 0, 100, int(os.getenv("INTERVIEW_THRESHOLD", 50)))
                 evaluation_mode = st.selectbox(
                     "طريقة التقييم:",
                     ["تقييم السيرة الذاتية فقط", "تقييم السيرة الذاتية والاختبار"],
@@ -1132,5 +1128,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
