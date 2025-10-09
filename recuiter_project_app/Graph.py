@@ -40,7 +40,7 @@ def evaluate_cv_node(state: PipelineState) -> PipelineState:
             candidate.overall_score = candidate.cv_score
 
         elif evaluation_mode == "تقييم السيرة الذاتية + الاختبار":
-            if candidate.status.lower() == "tested":
+            if candidate.test_score > 0:
                 candidate.overall_score = 0.6 * candidate.cv_score + 0.4 * candidate.test_score
             else:
                 candidate.overall_score = candidate.cv_score
@@ -150,3 +150,4 @@ def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السير�
     os.environ["EVALUATION_MODE"] = evaluation_mode
 
     return g.compile()
+
