@@ -26,6 +26,9 @@ from Drive import (
 )
 
 # تحميل متغيرات البيئة
+import os
+os.environ["MALLOC_TRIM_THRESHOLD_"] = "0"
+os.environ["MALLOC_ARENA_MAX"] = "2"
 load_dotenv()
 
 # إعدادات الصفحة
@@ -1126,6 +1129,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
