@@ -450,3 +450,4 @@ def node_ingest_forms(state: PipelineState) -> PipelineState:
 
     logger.info(f"✅ Form processing complete: {processed_count} candidates added")
     return state
+
