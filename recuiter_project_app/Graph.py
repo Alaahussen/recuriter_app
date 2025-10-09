@@ -36,7 +36,9 @@ def evaluate_cv_node(state: PipelineState) -> PipelineState:
         candidate.status = getattr(candidate, "status", "Pending")
 
         # --- Calculate overall score based on evaluation mode ---
-        print(evaluation_mode,candidate.test_score)
+        logger.info(candidate.cv_score)
+        logger.info(candidate.test_score)
+        logger.info(evaluation_mode)
         if evaluation_mode == "تقييم السيرة الذاتية فقط":
             candidate.overall_score = candidate.cv_score
         
@@ -151,6 +153,7 @@ def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السير�
     os.environ["EVALUATION_MODE"] = evaluation_mode
 
     return g.compile()
+
 
 
 
