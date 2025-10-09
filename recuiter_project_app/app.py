@@ -167,8 +167,8 @@ color: #1e1e1e !important; }
 .stCheckbox > label {
         direction: rtl;
         text-align: right;
-        padding-right: 25px;
-        transform: scale(0.8);
+        padding-right: 5px;
+        gap: 4px !important;
     }
 
 </style>
@@ -1124,6 +1124,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
