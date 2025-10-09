@@ -14,6 +14,7 @@ from config import get_job_config
 import openai
 from google.generativeai import GenerativeModel
 import google.generativeai as genai
+from Utils import *
 
 logger = logging.getLogger(__name__)
 load_dotenv()
@@ -445,9 +446,11 @@ def node_ingest_forms(state: PipelineState) -> PipelineState:
             attachments=attachments_meta,
             job_id=config['job_id']
         )
+        assign_city_to_candidate(cand, form_data)
         state.candidates.append(cand.model_dump())
         processed_count += 1
 
     logger.info(f"✅ Form processing complete: {processed_count} candidates added")
     return state
+
 
