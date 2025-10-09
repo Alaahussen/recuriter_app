@@ -331,7 +331,7 @@ def node_ingest_gmail(state: PipelineState) -> PipelineState:
     return state
 
 
-def node_ingest_forms(state: PipelineState) -> PipelineState
+def node_ingest_forms(state: PipelineState) -> PipelineState:
     """
     Process Google Form responses:
       - Create a folder per candidate using their email (directly, not inside Form CVs)
@@ -452,6 +452,7 @@ def node_ingest_forms(state: PipelineState) -> PipelineState
 
     logger.info(f"✅ Form processing complete: {processed_count} candidates added")
     return state
+
 
 
 
