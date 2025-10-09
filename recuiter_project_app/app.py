@@ -162,7 +162,10 @@ color: #1e1e1e !important; }
 }
 
 /* Tooltip + Radio + Checkbox */
-.stRadio > label,
+.stRadio > label {
+    gap: 4px !important; /* tighten space between button and text */
+}
+}
 /* Make checkboxes smaller */
 .stCheckbox > label {
         direction: rtl;
@@ -1124,6 +1127,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
