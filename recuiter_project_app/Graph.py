@@ -13,7 +13,7 @@ import os
 load_dotenv()
 
 
-def evaluate_cv_node(state: PipelineState) -> PipelineState
+def evaluate_cv_node(state: PipelineState) -> PipelineState:
     """
     Evaluate candidates based on the configured evaluation mode and update their status.
     Supports re-evaluation when new test results appear or evaluation mode changes.
@@ -151,3 +151,4 @@ def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السير�
     os.environ["EVALUATION_MODE"] = evaluation_mode
 
     return g.compile()
+
