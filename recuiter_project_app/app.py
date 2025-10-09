@@ -37,170 +37,138 @@ st.set_page_config(
 )
 # تنسيق CSS للغة العربية
 st.markdown("""
-<style>
-   /* 🌐 General Page Setup */
+  <style>
+/* ------------------------------
+   🌐 Global RTL + Light Theme Setup
+---------------------------------*/
 html, body, [class*="css"] {
     font-family: 'Tajawal', 'Cairo', sans-serif !important;
     direction: rtl !important;
     text-align: right !important;
-    background-color: #f9fafb !important;
+    background-color: #ffffff !important; /* pure white background */
+    color: #1e1e1e !important; /* dark gray readable text */
+}
+
+/* ------------------------------
+   🧭 Sidebar Styling
+---------------------------------*/
+[data-testid="stSidebar"] {
+    direction: rtl !important;
+    text-align: right !important;
+    background-color: #f9fafb !important; /* soft light gray */
     color: #1e1e1e !important;
 }
 
-/* 🌟 Main Container */
-.main .block-container {
-    direction: rtl !important;
-    text-align: right !important;
-    padding: 2rem 3rem !important;
+/* Sidebar inputs and labels */
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] .stRadio,
+[data-testid="stSidebar"] .stCheckbox {
+    font-weight: 500;
+    font-size: 1rem;
+    color: #1e1e1e !important;
 }
 
-/* 🧭 Sidebar */
-.css-1d391kg, .stSidebar {
-    background-color: #f9fafb  !important;
-    color: white !important;
-    direction: rtl !important;
-    text-align: right !important;
-}
-.css-1d391kg a, .stSidebar a {
-    color: #facc15 !important;
-    font-weight: bold !important;
-}
-.css-1d391kg a:hover {
-    color: #fde047 !important;
+/* Slider styling — ensure numbers appear clearly */
+.stSlider {
+    direction: ltr !important; /* keep numbers visible */
+    text-align: left !important;
+    color: #1e1e1e !important;
 }
 
-/* 🏷️ Titles & Headings */
-h1, h2, h3, h4, h5, h6 {
-    font-family: 'Tajawal', sans-serif !important;
-    direction: rtl !important;
-    text-align: right !important;
-    font-weight: 700 !important;
-    color: #1e293b !important;
+/* ------------------------------
+   📋 Headings & Cards
+---------------------------------*/
+.main-header {
+    font-size: 2.5rem;
+    color: #1f77b4;
+    text-align: center;
+    margin-bottom: 2rem;
+    font-weight: 700;
 }
 
-/* 🧩 Info / Success / Error Boxes */
-div.stAlert {
-    direction: rtl !important;
-    text-align: right !important;
-    font-size: 1.05rem !important;
-    border-radius: 12px !important;
+.metric-card, .candidate-card, .report-section {
+    background-color: #ffffff;
+    border-radius: 0.75rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    padding: 1.5rem;
+    margin: 1rem 0;
+    color: #1e1e1e;
 }
 
-/* 🟢 Success Box */
-div.stAlert[data-baseweb="toast"]:has(.stSuccess) {
-    background-color: #dcfce7 !important;
-    color: #166534 !important;
-}
-
-/* 🔵 Info Box */
-div.stAlert[data-baseweb="toast"]:has(.stInfo) {
-    background-color: #dbeafe !important;
-    color: #1e40af !important;
-}
-
-/* 🔴 Error Box */
-div.stAlert[data-baseweb="toast"]:has(.stError) {
-    background-color: #fee2e2 !important;
-    color: #991b1b !important;
-}
-
-/* 📦 Buttons */
-.stButton>button {
-    background-color: #2563eb !important;
-    color: white !important;
+/* ------------------------------
+   🖲️ Buttons
+---------------------------------*/
+.stButton > button {
+    background-color: #facc15 !important; /* golden accent */
+    color: #1e1e1e !important;
     font-weight: 600 !important;
-    border-radius: 12px !important;
-    padding: 0.6rem 1.2rem !important;
+    border-radius: 0.5rem !important;
     border: none !important;
-    transition: 0.3s ease-in-out !important;
-    direction: rtl !important;
 }
-.stButton>button:hover {
-    background-color: #1d4ed8 !important;
-    transform: translateY(-2px) !important;
+.stButton > button:hover {
+    background-color: #fde047 !important; /* lighter gold hover */
 }
 
-/* 🧮 Text Inputs */
-.stTextInput>div>div>input {
-    direction: rtl !important;
-    text-align: right !important;
-    border-radius: 8px !important;
-    border: 1px solid #cbd5e1 !important;
-    padding: 0.5rem !important;
-}
-
-/* 🧾 Select Boxes */
-.stSelectbox>div>div>div>div {
-    direction: rtl !important;
-    text-align: right !important;
-}
-
-/* 📊 DataFrame / Table Styling */
-.dataframe {
-    margin-top: 1rem !important;
-    border-radius: 10px !important;
-    overflow: hidden !important;
-    font-size: 0.95rem !important;
-}
-
-/* ✅ Keep DataFrames LTR for English text */
+/* ------------------------------
+   📑 DataFrame Styling (LTR)
+---------------------------------*/
 .dataframe, .dataframe table, .dataframe th, .dataframe td {
-    direction: ltr !important;
+    direction: ltr !important;       /* English text direction */
     text-align: left !important;
     unicode-bidi: plaintext !important;
     font-family: 'Segoe UI', 'Courier New', sans-serif !important;
 }
 
-/* 🧱 DataFrame headers */
+/* Headers */
 .dataframe th {
-    background-color: #2563eb !important;
-    color: white !important;
-    font-weight: 700 !important;
+    background-color: #facc15 !important; /* gold header */
+    color: #1e1e1e !important;
+    font-weight: bold !important;
     text-align: left !important;
 }
 
-/* 🧱 DataFrame rows */
+/* Cells */
 .dataframe td {
     background-color: #ffffff !important;
+    color: #1e1e1e !important;
     border-bottom: 1px solid #e5e7eb !important;
 }
 
-/* Hover effect for rows */
-.dataframe tr:hover td {
-    background-color: #f1f5f9 !important;
-}
-
-/* 📑 Markdown Text */
-.stMarkdown {
+/* ------------------------------
+   ⚠️ Alerts and Info Boxes
+---------------------------------*/
+.stAlert {
     direction: rtl !important;
     text-align: right !important;
 }
 
-/* 📎 File Upload */
-.stFileUploader {
+/* ------------------------------
+   🧩 Form Elements
+---------------------------------*/
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea,
+.stNumberInput > div > div > input,
+.stSelectbox > div > div > div,
+.stMultiselect > div > div > div {
+    direction: rtl !important;
+    text-align: right !important;
+    font-family: 'Tajawal', sans-serif !important;
+}
+
+/* ------------------------------
+   📅 Tabs and Misc
+---------------------------------*/
+.stTabs [data-baseweb="tab-list"] {
+    direction: rtl !important;
+}
+
+/* Tooltip + Radio + Checkbox */
+.stRadio > label,
+.stCheckbox > label {
     direction: rtl !important;
     text-align: right !important;
 }
-
-/* 🧭 Footer */
-footer {
-    text-align: center !important;
-    font-size: 0.85rem !important;
-    color: #94a3b8 !important;
-    direction: rtl !important;
-}
-
-/* 🎚️ Slider Fix — Keep numbers visible and aligned left-to-right */
-.stSlider, .stSlider > div, .stSlider > div > div {
-    direction: ltr !important;
-    text-align: left !important;
-}
-.stSlider label {
-    direction: rtl !important;
-    text-align: right !important;
-    font-weight: 600 !important;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -1154,6 +1122,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
