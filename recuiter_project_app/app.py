@@ -168,7 +168,7 @@ color: #1e1e1e !important; }
         direction: rtl;
         text-align: right;
         padding-right: 15px;
-        transform: scale(0.5);
+        transform: scale(0.8);
     }
 
 </style>
@@ -1124,6 +1124,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
