@@ -4,7 +4,7 @@ import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import streamlit as st
 import os
-import json
+import jso
 import pandas as pd
 from datetime import datetime
 from typing import List, Dict, Any
@@ -35,146 +35,172 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
 # تنسيق CSS للغة العربية
 st.markdown("""
 <style>
-    /* استيراد خط عربي */
-    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
-    
-    /* تنسيق RTL أساسي لجميع العناصر */
-    .main .block-container {
-        direction: rtl;
-        text-align: right;
-        font-family: 'Tajawal', 'Segoe UI', sans-serif;
-    }
-    
-    /* تنسيق RID لجميع عناصر النص */
-    .main-header, .metric-card, .candidate-card, .report-section,
-    h1, h2, h3, h4, h5, h6, p, div, span, label {
-        direction: rtl;
-        text-align: right;
-        font-family: 'Tajawal', 'Segoe UI', sans-serif;
-    }
-    
-    .main-header {
-        font-size: 3rem;
-        color: #1f77b4;
-        text-align: center;
-        margin-bottom: 2rem;
-        font-weight: 700;
-    }
-    
-    .metric-card {
-        background-color: #f0f2f6;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        margin: 0.5rem;
-        text-align: center;
-        border: 1px solid #e0e0e0;
-    }
-    
-    .candidate-card {
-        background-color: #ffffff;
-        padding: 1.5rem;
-        border-radius: 0.5rem;
-        border-right: 4px solid #1f77b4;
-        margin: 1rem 0;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .status-badge {
-        padding: 0.25rem 0.75rem;
-        border-radius: 1rem;
-        font-size: 0.8rem;
-        font-weight: bold;
-    }
-    
-    .report-section {
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        margin: 1rem 0;
-    }
-    
-    /* تنسيق RTL لمكونات Streamlit */
-    .stTextInput > div > div > input,
-    .stTextArea > div > div > textarea,
-    .stNumberInput > div > div > input,
-    .stSelectbox > div > div > div,
-    .stMultiselect > div > div > div {
-        direction: rtl;
-        text-align: right;
-        font-family: 'Tajawal', sans-serif;
-    }
-    
-    /* تنسيق RTL للأزرار */
-    .stButton > button {
-        font-family: 'Tajawal', sans-serif;
-    }
-    
-    /* تنسيق RDL لأزرار الراديو */
-    .stRadio > label {
-        direction: rtl;
-        text-align: right;
-        padding-right: 20px;
-    }
-    
-    /* تنسيق RTL لمربعات الاختيار */
-    .stCheckbox > label {
-        direction: rtl;
-        text-align: right;
-        padding-right: 20px;
-    }
-    
-    /* تنسيق RTL للشريط الجانبي */
-    [data-testid="stSidebar"] {
-        direction: rtl;
-        text-align: right;
-    }
-    
-    [data-testid="stSidebar"] .stRadio > label,
-    [data-testid="stSidebar"] .stCheckbox > label,
-    [data-testid="stSidebar"] .stButton > button {
-        direction: rtl;
-        text-align: right;
-    }
-    
-    /* تنسيق RTL للتبويبات */
-    .stTabs [data-baseweb="tab-list"] {
-        direction: rtl;
-    }
-    
-    
-    .dataframe th {
-        text-align: right !important;
-    }
-    
-    /* تنسيق RTL للتنبيهات */
-    .stAlert {
-        direction: rtl;
-        text-align: right;
-    }
-    
-    /* تنسيق RTL للنماذج */
-    .stForm {
-        direction: rtl;
-    }
-    
-    /* تنسيق RTL للقوائم المنسدلة */
-    .stSelectbox [data-baseweb="select"] div {
-        text-align: right;
-    }
-    
-    /* تنسيق RTL للتحديد المتعدد */
-    .stMultiSelect [data-baseweb="select"] div {
-        text-align: right;
-    }
-    
-    /* تنسيق RTL لعناصر النموذج */
-    .stFormSubmitButton {
-        direction: rtl;
-    }
+   /* 🌐 General Page Setup */
+html, body, [class*="css"] {
+    font-family: 'Tajawal', 'Cairo', sans-serif !important;
+    direction: rtl !important;
+    text-align: right !important;
+    background-color: #f9fafb !important;
+    color: #1e1e1e !important;
+}
+
+/* 🌟 Main Container */
+.main .block-container {
+    direction: rtl !important;
+    text-align: right !important;
+    padding: 2rem 3rem !important;
+}
+
+/* 🧭 Sidebar */
+.css-1d391kg, .stSidebar {
+    background-color: #1f2937 !important;
+    color: white !important;
+    direction: rtl !important;
+    text-align: right !important;
+}
+.css-1d391kg a, .stSidebar a {
+    color: #facc15 !important;
+    font-weight: bold !important;
+}
+.css-1d391kg a:hover {
+    color: #fde047 !important;
+}
+
+/* 🏷️ Titles & Headings */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Tajawal', sans-serif !important;
+    direction: rtl !important;
+    text-align: right !important;
+    font-weight: 700 !important;
+    color: #1e293b !important;
+}
+
+/* 🧩 Info / Success / Error Boxes */
+div.stAlert {
+    direction: rtl !important;
+    text-align: right !important;
+    font-size: 1.05rem !important;
+    border-radius: 12px !important;
+}
+
+/* 🟢 Success Box */
+div.stAlert[data-baseweb="toast"]:has(.stSuccess) {
+    background-color: #dcfce7 !important;
+    color: #166534 !important;
+}
+
+/* 🔵 Info Box */
+div.stAlert[data-baseweb="toast"]:has(.stInfo) {
+    background-color: #dbeafe !important;
+    color: #1e40af !important;
+}
+
+/* 🔴 Error Box */
+div.stAlert[data-baseweb="toast"]:has(.stError) {
+    background-color: #fee2e2 !important;
+    color: #991b1b !important;
+}
+
+/* 📦 Buttons */
+.stButton>button {
+    background-color: #2563eb !important;
+    color: white !important;
+    font-weight: 600 !important;
+    border-radius: 12px !important;
+    padding: 0.6rem 1.2rem !important;
+    border: none !important;
+    transition: 0.3s ease-in-out !important;
+    direction: rtl !important;
+}
+.stButton>button:hover {
+    background-color: #1d4ed8 !important;
+    transform: translateY(-2px) !important;
+}
+
+/* 🧮 Text Inputs */
+.stTextInput>div>div>input {
+    direction: rtl !important;
+    text-align: right !important;
+    border-radius: 8px !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 0.5rem !important;
+}
+
+/* 🧾 Select Boxes */
+.stSelectbox>div>div>div>div {
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+/* 📊 DataFrame / Table Styling */
+.dataframe {
+    margin-top: 1rem !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    font-size: 0.95rem !important;
+}
+
+/* ✅ Keep DataFrames LTR for English text */
+.dataframe, .dataframe table, .dataframe th, .dataframe td {
+    direction: ltr !important;
+    text-align: left !important;
+    unicode-bidi: plaintext !important;
+    font-family: 'Segoe UI', 'Courier New', sans-serif !important;
+}
+
+/* 🧱 DataFrame headers */
+.dataframe th {
+    background-color: #2563eb !important;
+    color: white !important;
+    font-weight: 700 !important;
+    text-align: left !important;
+}
+
+/* 🧱 DataFrame rows */
+.dataframe td {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #e5e7eb !important;
+}
+
+/* Hover effect for rows */
+.dataframe tr:hover td {
+    background-color: #f1f5f9 !important;
+}
+
+/* 📑 Markdown Text */
+.stMarkdown {
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+/* 📎 File Upload */
+.stFileUploader {
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+/* 🧭 Footer */
+footer {
+    text-align: center !important;
+    font-size: 0.85rem !important;
+    color: #94a3b8 !important;
+    direction: rtl !important;
+}
+
+/* 🎚️ Slider Fix — Keep numbers visible and aligned left-to-right */
+.stSlider, .stSlider > div, .stSlider > div > div {
+    direction: ltr !important;
+    text-align: left !important;
+}
+.stSlider label {
+    direction: rtl !important;
+    text-align: right !important;
+    font-weight: 600 !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -1128,6 +1154,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
