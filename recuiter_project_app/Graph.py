@@ -78,6 +78,7 @@ def evaluate_cv_node(state: PipelineState) -> PipelineState:
 
 
 def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السيرة الذاتية فقط"):
+    
     """Build ATS pipeline with flexible evaluation mode and test sending."""
     gmail, calendar, drive, sheets, forms = google_services()
 
@@ -102,27 +103,27 @@ def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السير�
     g.add_edge("ingest_gmail", "ingest_forms")
 
     def next_step(state: PipelineState) -> str:
-    """
-    Decide the next step in the pipeline.
-    This version ensures poll_test_answers is always executed when tests are enabled.
-    """
-    # 🟢 1️⃣ New candidates just received → classify them
-    new_candidates = [c for c in state.candidates if c.status == "received"]
-    if new_candidates:
-        return "classify_and_score"
-
-    if send_tests_enabled:
-        # 🟡 2️⃣ Candidates classified but no test form yet → send tests
-        needs_tests = any(c.status == "classified" and not getattr(c, "form_id", None) for c in state.candidates)
-        if needs_tests:
-            return "send_tests"
-
-        # 🔵 3️⃣ Always poll test answers when tests are enabled
-        # Even if no one is currently in "test_sent", it ensures updated results are pulled.
-        return "poll_test_answers"
-
-    # 🔴 4️⃣ If tests are disabled, go straight to evaluation
-    return "evaluate_cv"
+        """
+        Decide the next step in the pipeline.
+        This version ensures poll_test_answers is always executed when tests are enabled.
+        """
+        # 🟢 1️⃣ New candidates just received → classify them
+        new_candidates = [c for c in state.candidates if c.status == "received"]
+        if new_candidates:
+            return "classify_and_score"
+    
+        if send_tests_enabled:
+            # 🟡 2️⃣ Candidates classified but no test form yet → send tests
+            needs_tests = any(c.status == "classified" and not getattr(c, "form_id", None) for c in state.candidates)
+            if needs_tests:
+                return "send_tests"
+    
+            # 🔵 3️⃣ Always poll test answers when tests are enabled
+            # Even if no one is currently in "test_sent", it ensures updated results are pulled.
+            return "poll_test_answers"
+    
+        # 🔴 4️⃣ If tests are disabled, go straight to evaluation
+        return "evaluate_cv"
 
 
 # --- Conditional edges ---
@@ -148,6 +149,7 @@ g.add_edge("generate_reports", END)
 
 os.environ["EVALUATION_MODE"] = evaluation_mode
 return g.compile()
+
 
 
 
