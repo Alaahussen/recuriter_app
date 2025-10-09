@@ -102,43 +102,53 @@ def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السير�
     g.add_edge("ingest_gmail", "ingest_forms")
 
     def next_step(state: PipelineState) -> str:
-        new_candidates = [c for c in state.candidates if c.status == "received"]
-
-        if new_candidates:
-            return "classify_and_score"
-
-        if send_tests_enabled:
-            needs_tests = any(c.status == "classified" and not c.form_id for c in state.candidates)
-            if needs_tests:
-                return "send_tests"
-
-            needs_polling = any(c.status == "test_sent" for c in state.candidates)
-            if needs_polling:
-                return "poll_test_answers"
-
-        return "evaluate_cv"  # ✅ Go to evaluation next
-
-    g.add_conditional_edges("ingest_forms", next_step, {
-        "classify_and_score": "classify_and_score",
-        "send_tests": "send_tests",
-        "poll_test_answers": "poll_test_answers",
-        "evaluate_cv": "evaluate_cv"
-    })
+    """
+    Decide the next step in the pipeline.
+    This version ensures poll_test_answers is always executed when tests are enabled.
+    """
+    # 🟢 1️⃣ New candidates just received → classify them
+    new_candidates = [c for c in state.candidates if c.status == "received"]
+    if new_candidates:
+        return "classify_and_score"
 
     if send_tests_enabled:
-        g.add_edge("classify_and_score", "send_tests")
-        g.add_edge("send_tests", "poll_test_answers")
-        g.add_edge("poll_test_answers", "evaluate_cv")
-    else:
-        g.add_edge("classify_and_score", "evaluate_cv")
+        # 🟡 2️⃣ Candidates classified but no test form yet → send tests
+        needs_tests = any(c.status == "classified" and not getattr(c, "form_id", None) for c in state.candidates)
+        if needs_tests:
+            return "send_tests"
 
-    # ✅ Evaluation happens before computing & storing
-    g.add_edge("evaluate_cv", "compute_overall_and_store")
-    g.add_edge("compute_overall_and_store", "generate_reports")
-    g.add_edge("generate_reports", END)
+        # 🔵 3️⃣ Always poll test answers when tests are enabled
+        # Even if no one is currently in "test_sent", it ensures updated results are pulled.
+        return "poll_test_answers"
 
-    os.environ["EVALUATION_MODE"] = evaluation_mode
-    return g.compile()
+    # 🔴 4️⃣ If tests are disabled, go straight to evaluation
+    return "evaluate_cv"
+
+
+# --- Conditional edges ---
+g.add_conditional_edges("ingest_forms", next_step, {
+    "classify_and_score": "classify_and_score",
+    "send_tests": "send_tests",
+    "poll_test_answers": "poll_test_answers",
+    "evaluate_cv": "evaluate_cv"
+})
+
+# --- Flow structure ---
+if send_tests_enabled:
+    g.add_edge("classify_and_score", "send_tests")
+    g.add_edge("send_tests", "poll_test_answers")
+    g.add_edge("poll_test_answers", "evaluate_cv")
+else:
+    g.add_edge("classify_and_score", "evaluate_cv")
+
+# ✅ Evaluation happens before computing & storing
+g.add_edge("evaluate_cv", "compute_overall_and_store")
+g.add_edge("compute_overall_and_store", "generate_reports")
+g.add_edge("generate_reports", END)
+
+os.environ["EVALUATION_MODE"] = evaluation_mode
+return g.compile()
+
 
 
 
