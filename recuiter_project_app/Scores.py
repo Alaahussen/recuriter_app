@@ -200,7 +200,7 @@ def node_poll_test_answers(state: PipelineState) -> PipelineState:
     gmail, calendar, drive, sheets, forms = google_services()
 
     for c in state.candidates:
-        if c.status not in {'test_sent', 'classified'}:
+        if c.status not in {'test_sent', 'classified','Pending'}:
             continue
 
         try:
@@ -436,4 +436,5 @@ def node_compute_overall_and_store(state: PipelineState) -> PipelineState:
             drive_folder_link = f"https://drive.google.com/drive/folders/{state.drive_folder_id}" if state.drive_folder_id else ""
             update_candidate_row(sheets, state.sheet_id, row_index, c, drive_folder_link)
             
+
     return state
