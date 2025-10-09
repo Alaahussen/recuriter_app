@@ -191,7 +191,7 @@ def node_send_tests(state: PipelineState) -> PipelineState:
 
 # Enhance the node_poll_test_answers function
 
-def node_poll_test_answers(state: PipelineState) -> PipelineState:
+def node_poll_test_answers(state: PipelineState) -> PipelineState
     config=get_job_config()
     """
     Poll test answers from each candidate's Google Form with proper choice-based scoring.
@@ -438,5 +438,6 @@ def node_compute_overall_and_store(state: PipelineState) -> PipelineState:
             
 
     return state
+
 
 
