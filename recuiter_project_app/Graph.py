@@ -39,7 +39,7 @@ def evaluate_cv_node(state: PipelineState) -> PipelineState:
         if evaluation_mode == "تقييم السيرة الذاتية فقط":
             candidate.overall_score = candidate.cv_score
 
-        elif evaluation_mode == "تقييم السيرة الذاتية + الاختبار":
+        elif evaluation_mode == "تقييم السيرة الذاتية و الاختبار":
             if candidate.test_score > 0:
                 candidate.overall_score = 0.6 * candidate.cv_score + 0.4 * candidate.test_score
             else:
