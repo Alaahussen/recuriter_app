@@ -56,7 +56,7 @@ html, body, [class*="css"] {
 
 /* 🧭 Sidebar */
 .css-1d391kg, .stSidebar {
-    background-color: #1f2937 !important;
+    background-color: #f9fafb  !important;
     color: white !important;
     direction: rtl !important;
     text-align: right !important;
@@ -1154,6 +1154,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
