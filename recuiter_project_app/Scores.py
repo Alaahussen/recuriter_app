@@ -17,7 +17,7 @@ logger = logging.getLogger("ats_pipeline")
 
 
 
-def node_classify_and_score(state: PipelineState) -> PipelineState:
+def node_classify_and_score(state: PipelineState) -> PipelineState
     config=get_job_config()
     gmail, calendar, drive, sheets, forms = google_services()
     for c in state.candidates:
@@ -438,3 +438,4 @@ def node_compute_overall_and_store(state: PipelineState) -> PipelineState:
             
 
     return state
+
