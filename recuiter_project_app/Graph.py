@@ -26,7 +26,7 @@ def evaluate_cv_node(state: PipelineState) -> PipelineState:
         - EVALUATION_MODE: Controls which evaluation logic to use.
         - INTERVIEW_THRESHOLD: Minimum score to move candidate to the interview stage.
     """
-    evaluation_mode = os.getenv("EVALUATION_MODE", "تقييم السيرة الذاتية فقط")
+    evaluation_mode = os.getenv("EVALUATION_MODE")
     interview_threshold = float(os.getenv("INTERVIEW_THRESHOLD", "0.6"))
 
     for candidate in state.candidates:
@@ -39,10 +39,10 @@ def evaluate_cv_node(state: PipelineState) -> PipelineState:
         logger.info(candidate.cv_score)
         logger.info(candidate.test_score)
         logger.info(evaluation_mode)
-        if evaluation_mode == "تقييم السيرة الذاتية فقط":
+        if evaluation_mode in ("cv_only", "تقييم السيرة الذاتية فقط"):
             candidate.overall_score = candidate.cv_score
-        
-        elif evaluation_mode == "تقييم السيرة الذاتية والاختبار":
+
+        elif evaluation_mode in ("cv_and_test", "تقييم السيرة الذاتية والاختبار"):
             if candidate.test_score > 0:
                 candidate.overall_score = 0.6 * candidate.cv_score + 0.4 * candidate.test_score
             else:
@@ -153,6 +153,7 @@ def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السير�
     os.environ["EVALUATION_MODE"] = evaluation_mode
 
     return g.compile()
+
 
 
 
