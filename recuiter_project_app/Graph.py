@@ -12,34 +12,29 @@ import os
 
 load_dotenv()
 
-def evaluate_cv_node(state: PipelineState) -> PipelineState:
+
+def evaluate_cv_node(state: PipelineState) -> PipelineState
     """
     Evaluate candidates based on the configured evaluation mode and update their status.
-    Also syncs updates to Google Sheets if available.
-
-    Evaluation modes:
-        - "تقييم السيرة الذاتية فقط": Uses only CV score.
-        - "تقييم السيرة الذاتية + الاختبار": Combines CV and test scores if candidate is tested.
-
-    Environment variables:
-        - EVALUATION_MODE: Controls which evaluation logic to use.
-        - INTERVIEW_THRESHOLD: Minimum score to move candidate to the interview stage.
+    Supports re-evaluation when new test results appear or evaluation mode changes.
     """
+
     evaluation_mode = os.getenv("EVALUATION_MODE", "تقييم السيرة الذاتية فقط")
     interview_threshold = float(os.getenv("INTERVIEW_THRESHOLD", "0.6"))
 
     for candidate in state.candidates:
-        # --- Safe extraction of attributes ---
+        # --- Safe extraction ---
         candidate.cv_score = float(getattr(candidate, "cv_score", 0.0) or 0.0)
         candidate.test_score = float(getattr(candidate, "test_score", 0.0) or 0.0)
-        candidate.status = getattr(candidate, "status", "Pending")
+        previous_status = getattr(candidate, "status", "Pending")
 
-        # --- Calculate overall score based on evaluation mode ---
+        # --- Always recalc overall score (even if status already exists) ---
         if evaluation_mode == "تقييم السيرة الذاتية فقط":
             candidate.overall_score = candidate.cv_score
 
         elif evaluation_mode == "تقييم السيرة الذاتية + الاختبار":
-            if candidate.status.lower() == "tested":
+            # Recalculate if test score available
+            if candidate.test_score > 0:
                 candidate.overall_score = 0.6 * candidate.cv_score + 0.4 * candidate.test_score
             else:
                 candidate.overall_score = candidate.cv_score
@@ -48,18 +43,19 @@ def evaluate_cv_node(state: PipelineState) -> PipelineState:
             print(f"⚠️ Unknown evaluation mode: {evaluation_mode}, defaulting to CV score only.")
             candidate.overall_score = candidate.cv_score
 
-        # --- Assign status based on threshold ---
+        # --- Update status based on the *new* score ---
         if candidate.overall_score >= interview_threshold:
-            candidate.status = "Pending"
+            candidate.status = "Interviewed"
         else:
             candidate.status = "Under Threshold"
 
-        # --- Log evaluation ---
+        # --- Log changes ---
         print(f"✅ Evaluated {getattr(candidate, 'name', 'Unknown')}: "
               f"CV={candidate.cv_score}, Test={candidate.test_score}, "
-              f"Overall={candidate.overall_score}, Status={candidate.status}")
+              f"Overall={candidate.overall_score}, "
+              f"Old Status={previous_status} → New Status={candidate.status}")
 
-        # --- Update Google Sheet if possible ---
+        # --- Sync to Google Sheets (optional) ---
         try:
             if "sheets" in globals() and getattr(state, "sheet_id", None):
                 row_index = find_candidate_row_by_email(sheets, state.sheet_id, candidate.email)
@@ -78,7 +74,10 @@ def evaluate_cv_node(state: PipelineState) -> PipelineState:
 
 
 def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السيرة الذاتية فقط"):
-    """Build ATS pipeline with flexible evaluation mode and test sending."""
+    """
+    Build ATS pipeline with flexible evaluation mode and test sending.
+    Auto-detects when to re-evaluate after polling test answers.
+    """
     gmail, calendar, drive, sheets, forms = google_services()
 
     g = StateGraph(PipelineState)
@@ -91,7 +90,7 @@ def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السير�
     g.add_node("classify_and_score", node_classify_and_score)
     g.add_node("send_tests", node_send_tests)
     g.add_node("poll_test_answers", node_poll_test_answers)
-    g.add_node("evaluate_cv", evaluate_cv_node)  # ✅ New node here
+    g.add_node("evaluate_cv", evaluate_cv_node)  # ✅ Updated evaluation node
     g.add_node("compute_overall_and_store", node_compute_overall_and_store)
     g.add_node("generate_reports", node_generate_reports)
 
@@ -101,22 +100,32 @@ def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السير�
     g.add_edge("check_existing_candidates", "ingest_gmail")
     g.add_edge("ingest_gmail", "ingest_forms")
 
+    # --- Determine next step dynamically ---
     def next_step(state: PipelineState) -> str:
+        # 1️⃣ New candidates from Gmail or Forms
         new_candidates = [c for c in state.candidates if c.status == "received"]
-
         if new_candidates:
             return "classify_and_score"
 
+        # 2️⃣ Test logic (if enabled)
         if send_tests_enabled:
-            needs_tests = any(c.status == "classified" and not c.form_id for c in state.candidates)
+            # Candidates classified but not yet sent tests
+            needs_tests = any(c.status == "classified" and not getattr(c, "form_id", None) for c in state.candidates)
             if needs_tests:
                 return "send_tests"
 
+            # Candidates who have tests sent but no answers yet
             needs_polling = any(c.status == "test_sent" for c in state.candidates)
             if needs_polling:
                 return "poll_test_answers"
 
-        return "evaluate_cv"  # ✅ Go to evaluation next
+            # ✅ Candidates who now have test answers ready (need re-evaluation)
+            ready_for_eval = any(c.status in ["test_completed", "test_answered"] for c in state.candidates)
+            if ready_for_eval:
+                return "evaluate_cv"
+
+        # Default: directly evaluate
+        return "evaluate_cv"
 
     g.add_conditional_edges("ingest_forms", next_step, {
         "classify_and_score": "classify_and_score",
@@ -125,6 +134,7 @@ def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السير�
         "evaluate_cv": "evaluate_cv"
     })
 
+    # --- Conditional progression depending on test config ---
     if send_tests_enabled:
         g.add_edge("classify_and_score", "send_tests")
         g.add_edge("send_tests", "poll_test_answers")
@@ -132,19 +142,12 @@ def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السير�
     else:
         g.add_edge("classify_and_score", "evaluate_cv")
 
-    # ✅ Evaluation happens before computing & storing
+    # ✅ Evaluation happens before storing & reporting
     g.add_edge("evaluate_cv", "compute_overall_and_store")
     g.add_edge("compute_overall_and_store", "generate_reports")
     g.add_edge("generate_reports", END)
 
+    # --- Store selected mode globally ---
     os.environ["EVALUATION_MODE"] = evaluation_mode
+
     return g.compile()
-
-
-
-
-
-
-
-
-
