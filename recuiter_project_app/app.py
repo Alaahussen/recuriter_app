@@ -15,7 +15,7 @@ from config import get_job_config
 from Utils import _send_gmail_direct,_get_message_body,save_to_env,extract_city_from_form_data,assign_city_to_candidate
 import io
 import re
-from googleapiclient.http import MediaIoBaseUpload
+from googleapiclient.http import MediaIoBaseUploa
 from config import *
 from Featch_cv import normalize_arabic_text
 from Google_services import google_services
@@ -1328,6 +1328,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
