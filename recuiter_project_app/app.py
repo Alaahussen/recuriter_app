@@ -12,7 +12,7 @@ from models import PipelineState, Candidate
 from Graph import build_graph
 from dotenv import load_dotenv
 from config import get_job_config
-from Utils import _send_gmail_direct,_get_message_body,save_to_env
+from Utils import _send_gmail_direct,_get_message_body,save_to_env,extract_city_from_form_data
 import io
 import re
 from googleapiclient.http import MediaIoBaseUpload
@@ -1325,6 +1325,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
