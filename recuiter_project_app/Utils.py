@@ -7,8 +7,13 @@ from dotenv import load_dotenv
 from config import get_job_config
 from openai import OpenAI
 import google.generativeai as genai
+import logging
 load_dotenv()
 
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("ats_pipeline")
 
 HR_FROM_EMAIL = os.getenv("HR_FROM_EMAIL")  # optional From alias when sending emails
 
@@ -127,4 +132,5 @@ def assign_city_to_candidate(cand, form_data: dict):
     else:
         cand.city = ""
         logger.info(f"🚫 No city found for {cand.email}")
+
 
