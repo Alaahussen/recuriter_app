@@ -969,7 +969,7 @@ class ATSApp:
                 if st.button("📤 إرسال الاختبار إلى المرشح", key=f"send_test_{candidate.email}"):
                     with st.spinner("جاري إرسال الاختبار إلى المرشح..."):
                         try:
-                            state, success, links = node_send_tests(state)
+                            state, success, links = self.node_send_tests(state)
     
                             if success and candidate.email in links:
                                 form_link = links[candidate.email]
@@ -1313,6 +1313,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
