@@ -901,92 +901,85 @@ class ATSApp:
         return state, success_flag, form_links
 
     def display_candidate_details(self, candidate: Candidate):
-    candidate_folder_id = self.get_candidate_folder_id(candidate)
+        candidate_folder_id = self.get_candidate_folder_id(candidate)
+        
+        st.markdown(f"### 📋 تفاصيل المتقدم: {candidate.name or candidate.email}")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.info(f"**البريد الإلكتروني:** {candidate.email}")
+            st.info(f"**المدينة:** {candidate.city or 'غير متوفر'}")
+        
+        with col2:
+            if candidate.cv_score is not None:
+                st.success(f"**تقييم السيرة الذاتية:** {candidate.cv_score}/100")
+            if candidate.test_score is not None:
+                st.success(f"**نتيجة الاختبار:** {candidate.test_score}/100")
+            if candidate.overall_score is not None:
+                st.success(f"**التقييم الكلي:** {candidate.overall_score}/100")
+            st.success(f"**الوظيفة المتقدم لها:** {candidate.job_id or 'غير متوفر'}")
+        
+        with st.expander("📊 معلومات إضافية"):
+            col3, col4 = st.columns(2)
+            with col3:
+                st.write("**المؤهل العلمي:**", candidate.degree or "غير متوفر")
+                st.write("**الخبرة:**", candidate.experience or "غير متوفر")
+                st.write("**الشهادات:**", ", ".join(candidate.certifications) or "لا توجد")
+            with col4:
+                st.write("**معرّف الوظيفة (Job ID):**", candidate.job_id)
+                if candidate_folder_id:
+                    st.write("**مجلد المرشح على جوجل درايف:**", f"[فتح المجلد](https://drive.google.com/drive/folders/{candidate_folder_id})")
+        """Displays the candidate's test section with show/send options."""
+        with st.expander("🧠 اختبار المرشح", expanded=False):
+            st.write("يمكنك هنا عرض أو إرسال اختبار المرشح.")
+            col_test1, col_test2 = st.columns(2)
     
-    st.markdown(f"### 📋 تفاصيل المتقدم: {candidate.name or candidate.email}")
+            # --- عرض أسئلة الاختبار ---
+            with col_test1:
+                if st.button("📘 عرض أسئلة الاختبار", key=f"show_test_{candidate.email}"):
+                    with st.spinner("جاري إنشاء أسئلة الاختبار..."):
+                        try:
+                            # ✅ Create test questions using LLM
+                            from config import get_job_config
+                            from llm_utils import llm_json  # Ensure this exists in your utils
+                            config = get_job_config()
     
-    col1, col2 = st.columns(2)
+                            quiz = llm_json(
+                                TEST_GEN_PROMPT.format(job_id=config['job_id']),
+                                expect_list=True
+                            ) or []
     
-    with col1:
-        st.info(f"**البريد الإلكتروني:** {candidate.email}")
-        st.info(f"**المدينة:** {candidate.city or 'غير متوفر'}")
+                            if quiz:
+                                st.markdown("#### 📝 أسئلة الاختبار:")
+                                for i, q in enumerate(quiz, start=1):
+                                    qtxt = q.get("question") if isinstance(q, dict) else str(q)
+                                    opts = q.get("options", []) if isinstance(q, dict) else []
+                                    st.markdown(f"**{i}. {qtxt}**")
+                                    if opts:
+                                        for opt in opts:
+                                            st.markdown(f"- {opt}")
+                                    st.markdown("---")
+                            else:
+                                st.warning("لم يتم توليد أي أسئلة اختبار.")
+                        except Exception as e:
+                            st.error(f"حدث خطأ أثناء توليد الأسئلة: {e}")
     
-    with col2:
-        if candidate.cv_score is not None:
-            st.success(f"**تقييم السيرة الذاتية:** {candidate.cv_score}/100")
-        if candidate.test_score is not None:
-            st.success(f"**نتيجة الاختبار:** {candidate.test_score}/100")
-        if candidate.overall_score is not None:
-            st.success(f"**التقييم الكلي:** {candidate.overall_score}/100")
-        st.success(f"**الوظيفة المتقدم لها:** {candidate.job_id or 'غير متوفر'}")
+            # --- إرسال الاختبار إلى المرشح ---
+            with col_test2:
+                if st.button("📤 إرسال الاختبار إلى المرشح", key=f"send_test_{candidate.email}"):
+                    with st.spinner("جاري إرسال الاختبار إلى المرشح..."):
+                        try:
+                            state, success, links = self.node_send_tests(state)
     
-    with st.expander("📊 معلومات إضافية"):
-        col3, col4 = st.columns(2)
-        with col3:
-            st.write("**المؤهل العلمي:**", candidate.degree or "غير متوفر")
-            st.write("**الخبرة:**", candidate.experience or "غير متوفر")
-            st.write("**الشهادات:**", ", ".join(candidate.certifications) or "لا توجد")
-        with col4:
-            st.write("**معرّف الوظيفة (Job ID):**", candidate.job_id)
-            if candidate_folder_id:
-                st.write("**مجلد المرشح على جوجل درايف:**", f"[فتح المجلد](https://drive.google.com/drive/folders/{candidate_folder_id})")
-
-    # 🧩 قسم الاختبار الجديد
-    from datetime import datetime, timedelta, UTC
-import json
-import streamlit as st
-
-def display_candidate_test_section(self, candidate, state):
-    """Displays the candidate's test section with show/send options."""
-    with st.expander("🧠 اختبار المرشح", expanded=False):
-        st.write("يمكنك هنا عرض أو إرسال اختبار المرشح.")
-        col_test1, col_test2 = st.columns(2)
-
-        # --- عرض أسئلة الاختبار ---
-        with col_test1:
-            if st.button("📘 عرض أسئلة الاختبار", key=f"show_test_{candidate.email}"):
-                with st.spinner("جاري إنشاء أسئلة الاختبار..."):
-                    try:
-                        # ✅ Create test questions using LLM
-                        from config import get_job_config
-                        from llm_utils import llm_json  # Ensure this exists in your utils
-                        config = get_job_config()
-
-                        quiz = llm_json(
-                            TEST_GEN_PROMPT.format(job_id=config['job_id']),
-                            expect_list=True
-                        ) or []
-
-                        if quiz:
-                            st.markdown("#### 📝 أسئلة الاختبار:")
-                            for i, q in enumerate(quiz, start=1):
-                                qtxt = q.get("question") if isinstance(q, dict) else str(q)
-                                opts = q.get("options", []) if isinstance(q, dict) else []
-                                st.markdown(f"**{i}. {qtxt}**")
-                                if opts:
-                                    for opt in opts:
-                                        st.markdown(f"- {opt}")
-                                st.markdown("---")
-                        else:
-                            st.warning("لم يتم توليد أي أسئلة اختبار.")
-                    except Exception as e:
-                        st.error(f"حدث خطأ أثناء توليد الأسئلة: {e}")
-
-        # --- إرسال الاختبار إلى المرشح ---
-        with col_test2:
-            if st.button("📤 إرسال الاختبار إلى المرشح", key=f"send_test_{candidate.email}"):
-                with st.spinner("جاري إرسال الاختبار إلى المرشح..."):
-                    try:
-                        state, success, links = self.node_send_tests(state)
-
-                        if success and candidate.email in links:
-                            form_link = links[candidate.email]
-                            st.success(f"✅ تم إرسال الاختبار بنجاح إلى {candidate.name or candidate.email}!")
-                            st.markdown(f"📎 [عرض اختبار المرشح]({form_link})")
-                        else:
-                            st.error("❌ فشل في إرسال الاختبار إلى هذا المرشح.")
-                    except Exception as e:
-                        st.error(f"حدث خطأ أثناء إرسال الاختبار: {e}")
+                            if success and candidate.email in links:
+                                form_link = links[candidate.email]
+                                st.success(f"✅ تم إرسال الاختبار بنجاح إلى {candidate.name or candidate.email}!")
+                                st.markdown(f"📎 [عرض اختبار المرشح]({form_link})")
+                            else:
+                                st.error("❌ فشل في إرسال الاختبار إلى هذا المرشح.")
+                        except Exception as e:
+                            st.error(f"حدث خطأ أثناء إرسال الاختبار: {e}")
     # قسم أسئلة المقابلة
     with st.expander("❓ أسئلة المقابلة", expanded=True):
         questions_content = self.get_interview_questions(candidate)
@@ -1320,6 +1313,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
