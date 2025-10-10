@@ -356,7 +356,7 @@ class ATSApp:
     
     def initialize_workflow(self):
         try:
-            self.workflow = build_graph(send_tests_enabled=self.send_tests_enabled)
+            self.workflow = build_graph()
             return True
         except Exception as e:
             st.error(f"فشل في تهيئة سير العمل: {str(e)}")
@@ -1313,6 +1313,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
