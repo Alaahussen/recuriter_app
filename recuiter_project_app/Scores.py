@@ -215,7 +215,7 @@ def node_poll_test_answers(state: PipelineState) -> PipelineState:
     gmail, calendar, drive, sheets, forms = google_services()
 
     for c in state.candidates:
-        if c.status not in {'test_sent', 'classified','Pending'}:
+        if c.status not in {'test_sent', 'classified'}:
             continue
 
         try:
@@ -453,6 +453,7 @@ def node_compute_overall_and_store(state: PipelineState) -> PipelineState:
             
 
     return state
+
 
 
 
