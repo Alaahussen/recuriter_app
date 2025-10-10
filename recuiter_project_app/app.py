@@ -13,6 +13,7 @@ from Graph import build_graph
 from dotenv import load_dotenv
 from config import get_job_config
 from Utils import *
+from Scores import *
 import io
 import re
 from googleapiclient.http import MediaIoBaseUpload
@@ -1210,6 +1211,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
