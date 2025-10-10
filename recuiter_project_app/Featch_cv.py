@@ -56,13 +56,7 @@ def normalize_arabic_text(t: str) -> str:
         return t
 
 
-import re
-import os
-import logging
-from openai import OpenAI
-import google.generativeai as genai
 
-logger = logging.getLogger(__name__)
 
 def intelligent_job_match(text: str, job_id: str) -> bool:
     """
@@ -168,7 +162,7 @@ def intelligent_job_match(text: str, job_id: str) -> bool:
     # --------------------------------------------------
     logger.info(f"🧠 Using LLM semantic matching for '{job_id}' ...")
 
-    provider = os.getenv("MODEL_TYPE", "Gemini").lower()
+    provider = os.getenv("MODEL_TYPE", "Gemini")
     city_match = False
 
     prompt = f"""
@@ -456,6 +450,7 @@ def node_ingest_forms(state: PipelineState) -> PipelineState:
 
     logger.info(f"✅ Form processing complete: {processed_count} candidates added")
     return state
+
 
 
 
