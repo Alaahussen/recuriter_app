@@ -16,17 +16,9 @@ load_dotenv()
 def evaluate_cv_node(state: PipelineState) -> PipelineState:
     """
     Evaluate candidates based on the configured evaluation mode and update their status.
-    Also syncs updates to Google Sheets if available.
-
-    Evaluation modes:
-        - "تقييم السيرة الذاتية فقط": Uses only CV score.
-        - "تقييم السيرة الذاتية + الاختبار": Combines CV and test scores if candidate is tested.
-
-    Environment variables:
-        - EVALUATION_MODE: Controls which evaluation logic to use.
-        - INTERVIEW_THRESHOLD: Minimum score to move candidate to the interview stage.
+    Syncs updates to Google Sheets if available.
     """
-    evaluation_mode = os.getenv("EVALUATION_MODE")
+    evaluation_mode = os.getenv("EVALUATION_MODE", "تقييم السيرة الذاتية فقط")
     interview_threshold = float(os.getenv("INTERVIEW_THRESHOLD", "0.6"))
 
     for candidate in state.candidates:
@@ -36,34 +28,28 @@ def evaluate_cv_node(state: PipelineState) -> PipelineState:
         candidate.status = getattr(candidate, "status", "Pending")
 
         # --- Calculate overall score based on evaluation mode ---
-        logger.info(candidate.cv_score)
-        logger.info(candidate.test_score)
-        logger.info(evaluation_mode)
         if evaluation_mode in ("cv_only", "تقييم السيرة الذاتية فقط"):
             candidate.overall_score = candidate.cv_score
-
         elif evaluation_mode in ("cv_and_test", "تقييم السيرة الذاتية والاختبار"):
             if candidate.test_score > 0:
                 candidate.overall_score = 0.6 * candidate.cv_score + 0.4 * candidate.test_score
             else:
                 candidate.overall_score = candidate.cv_score
-
         else:
-            print(f"⚠️ Unknown evaluation mode: {evaluation_mode}, defaulting to CV score only.")
+            print(f"⚠️ Unknown evaluation mode: {evaluation_mode}, using CV only.")
             candidate.overall_score = candidate.cv_score
 
-        # --- Assign status based on threshold ---
+        # --- Assign status ---
         if candidate.overall_score >= interview_threshold:
             candidate.status = "Pending"
         else:
             candidate.status = "Under Threshold"
 
-        # --- Log evaluation ---
         print(f"✅ Evaluated {getattr(candidate, 'name', 'Unknown')}: "
               f"CV={candidate.cv_score}, Test={candidate.test_score}, "
               f"Overall={candidate.overall_score}, Status={candidate.status}")
 
-        # --- Update Google Sheet if possible ---
+        # --- Update Google Sheet if exists ---
         try:
             if "sheets" in globals() and getattr(state, "sheet_id", None):
                 row_index = find_candidate_row_by_email(sheets, state.sheet_id, candidate.email)
@@ -81,8 +67,10 @@ def evaluate_cv_node(state: PipelineState) -> PipelineState:
     return state
 
 
-def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السيرة الذاتية فقط"):
-    """Build ATS pipeline with flexible evaluation mode and test sending."""
+def build_graph(evaluation_mode="تقييم السيرة الذاتية فقط"):
+    """
+    Build ATS pipeline with poll_test_answers node (no send_tests node).
+    """
     gmail, calendar, drive, sheets, forms = google_services()
 
     g = StateGraph(PipelineState)
@@ -93,58 +81,21 @@ def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السير�
     g.add_node("ingest_gmail", node_ingest_gmail)
     g.add_node("ingest_forms", node_ingest_forms)
     g.add_node("classify_and_score", node_classify_and_score)
-    g.add_node("send_tests", node_send_tests)
     g.add_node("poll_test_answers", node_poll_test_answers)
     g.add_node("evaluate_cv", evaluate_cv_node)
     g.add_node("compute_overall_and_store", node_compute_overall_and_store)
     g.add_node("generate_reports", node_generate_reports)
 
-    # --- Flow ---
+    # --- Flow structure ---
     g.set_entry_point("bootstrap")
     g.add_edge("bootstrap", "check_existing_candidates")
     g.add_edge("check_existing_candidates", "ingest_gmail")
     g.add_edge("ingest_gmail", "ingest_forms")
+    g.add_edge("ingest_forms", "classify_and_score")
 
-    # --- Conditional next step logic ---
-    def next_step(state: PipelineState) -> str:
-        """
-        Decide the next step in the pipeline.
-        Ensures poll_test_answers is always executed when tests are enabled.
-        """
-        # 🟢 1️⃣ New candidates just received → classify them
-        new_candidates = [c for c in state.candidates if c.status == "received"]
-        if new_candidates:
-            return "classify_and_score"
-
-        if send_tests_enabled:
-            # 🟡 2️⃣ Candidates classified but no test form yet → send tests
-            needs_tests = any(c.status == "classified" and not getattr(c, "form_id", None) for c in state.candidates)
-            if needs_tests:
-                return "send_tests"
-
-            # 🔵 3️⃣ Always poll test answers when tests are enabled
-            return "poll_test_answers"
-
-        # 🔴 4️⃣ If tests are disabled, go straight to evaluation
-        return "evaluate_cv"
-
-    # --- Conditional edges ---
-    g.add_conditional_edges("ingest_forms", next_step, {
-        "classify_and_score": "classify_and_score",
-        "send_tests": "send_tests",
-        "poll_test_answers": "poll_test_answers",
-        "evaluate_cv": "evaluate_cv"
-    })
-
-    # --- Flow structure ---
-    if send_tests_enabled:
-        g.add_edge("classify_and_score", "send_tests")
-        g.add_edge("send_tests", "poll_test_answers")
-        g.add_edge("poll_test_answers", "evaluate_cv")
-    else:
-        g.add_edge("classify_and_score", "evaluate_cv")
-
-    # ✅ Evaluation happens before computing & storing
+    # ✅ Keep poll_test_answers for updating test results (no test sending)
+    g.add_edge("classify_and_score", "poll_test_answers")
+    g.add_edge("poll_test_answers", "evaluate_cv")
     g.add_edge("evaluate_cv", "compute_overall_and_store")
     g.add_edge("compute_overall_and_store", "generate_reports")
     g.add_edge("generate_reports", END)
@@ -153,16 +104,3 @@ def build_graph(send_tests_enabled=True, evaluation_mode="تقييم السير�
     os.environ["EVALUATION_MODE"] = evaluation_mode
 
     return g.compile()
-
-
-
-
-
-
-
-
-
-
-
-
-
