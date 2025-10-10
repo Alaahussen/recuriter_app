@@ -724,18 +724,18 @@ class ATSApp:
             # Step 6: Update candidate status
             candidate.status = 'test_sent'
             candidate.form_id = form_id
-    
-            # Step 7: Update sheet
-            #st.info("📊 جاري تحديث جدول البيانات...")
+            candidate.notes = json.dumps({
+                "form_id": form_id,
+                "quiz": quiz
+            }, ensure_ascii=False)
+
+            # Update the candidate row in the sheet
             try:
-                sheet_id = self.sheet_id or st.session_state.get('sheet_id')
-                if sheet_id:
-                    row_index = find_candidate_row_by_email(sheets, sheet_id, candidate.email)
-                    if row_index:
-                        update_candidate_row_links(sheets, sheet_id, row_index, form_id, form_link, "")
-                        #st.success("✅ تم تحديث جدول البيانات")
-                    else:
-                        st.warning("⚠️ لم يتم العثور على صف المرشح في الجدول")
+                row_index = find_candidate_row_by_email(sheets, state.sheet_id, candidate.email)
+                if row_index:
+                    update_candidate_row_links(sheets, state.sheet_id, row_index, form_id, form_link, "")
+            except Exception as e:
+                logger.warning(f"Failed to update candidate row with form ID: {e}")
             except Exception as e:
                 st.warning(f"⚠️ فشل تحديث الجدول: {e}")
     
@@ -746,8 +746,6 @@ class ATSApp:
             error_msg = f"❌ فشل إرسال الاختبار لـ {candidate.email}: {str(e)}"
             st.error(error_msg)
             print(f"DEBUG ERROR: {error_msg}")
-            import traceback
-            traceback.print_exc()  # هذا سيطبع التفاصيل الكاملة للخطأ في الكونسول
             return False, ""
     def regenerate_interview_questions(self, candidate: Candidate, mode: str = "both") -> bool:
         """إعادة إنشاء أسئلة المقابلة بناءً على الوضع المحدد (cv / job_requirements / both)."""
@@ -1328,6 +1326,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
