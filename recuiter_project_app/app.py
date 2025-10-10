@@ -652,7 +652,7 @@ class ATSApp:
                 st.error("❌ فشل في إنشاء الأسئلة - quiz فارغ")
                 return False, ""
             
-            st.success(f"✅ تم إنشاء {len(quiz)} سؤال")
+            #st.success(f"✅ تم إنشاء {len(quiz)} سؤال")
             
             # Step 2: Create Google Form
             st.info("📝 جاري إنشاء نموذج Google...")
@@ -665,10 +665,10 @@ class ATSApp:
             
             form = forms.forms().create(body=form_body).execute()
             form_id = form["formId"]
-            st.success(f"✅ تم إنشاء النموذج: {form_id}")
+            #st.success(f"✅ تم إنشاء النموذج: {form_id}")
     
             # Step 3: Add questions to form
-            st.info("📋 جاري إضافة الأسئلة للنموذج...")
+            #st.info("📋 جاري إضافة الأسئلة للنموذج...")
             requests = []
             for i, q in enumerate(quiz):
                 qtxt = q.get("question") if isinstance(q, dict) else str(q)
@@ -699,11 +699,11 @@ class ATSApp:
     
             if requests:
                 forms.forms().batchUpdate(formId=form_id, body={"requests": requests}).execute()
-                st.success(f"✅ تم إضافة {len(requests)} سؤال للنموذج")
+                #st.success(f"✅ تم إضافة {len(requests)} سؤال للنموذج")
     
             # Step 4: Build form URL
             form_link = f"https://docs.google.com/forms/d/{form_id}/viewform"
-            st.success(f"🔗 رابط النموذج: {form_link}")
+            #st.success(f"🔗 رابط النموذج: {form_link}")
     
             # Step 5: Send email
             st.info("📧 جاري إرسال البريد الإلكتروني...")
@@ -725,20 +725,20 @@ class ATSApp:
             candidate.form_id = form_id
     
             # Step 7: Update sheet
-            st.info("📊 جاري تحديث جدول البيانات...")
+            #st.info("📊 جاري تحديث جدول البيانات...")
             try:
                 sheet_id = self.sheet_id or st.session_state.get('sheet_id')
                 if sheet_id:
                     row_index = find_candidate_row_by_email(sheets, sheet_id, candidate.email)
                     if row_index:
                         update_candidate_row_links(sheets, sheet_id, row_index, form_id, form_link, "")
-                        st.success("✅ تم تحديث جدول البيانات")
+                        #st.success("✅ تم تحديث جدول البيانات")
                     else:
                         st.warning("⚠️ لم يتم العثور على صف المرشح في الجدول")
             except Exception as e:
                 st.warning(f"⚠️ فشل تحديث الجدول: {e}")
     
-            st.success(f"🎉 تم إرسال الاختبار بنجاح لـ {candidate.email}")
+            #st.success(f"🎉 تم إرسال الاختبار بنجاح لـ {candidate.email}")
             return True, form_link
     
         except Exception as e:
@@ -1325,6 +1325,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
