@@ -900,17 +900,19 @@ class ATSApp:
     
         return state, success_flag, form_links
 
-    def display_candidate_details(self, candidate: Candidate):
+    def display_candidate_details(self, candidate: Candidate, state=None):
+
+        config = get_job_config()
         candidate_folder_id = self.get_candidate_folder_id(candidate)
-        
+    
         st.markdown(f"### 📋 تفاصيل المتقدم: {candidate.name or candidate.email}")
-        
+    
+        # --- معلومات عامة ---
         col1, col2 = st.columns(2)
-        
         with col1:
             st.info(f"**البريد الإلكتروني:** {candidate.email}")
             st.info(f"**المدينة:** {candidate.city or 'غير متوفر'}")
-        
+    
         with col2:
             if candidate.cv_score is not None:
                 st.success(f"**تقييم السيرة الذاتية:** {candidate.cv_score}/100")
@@ -919,7 +921,8 @@ class ATSApp:
             if candidate.overall_score is not None:
                 st.success(f"**التقييم الكلي:** {candidate.overall_score}/100")
             st.success(f"**الوظيفة المتقدم لها:** {candidate.job_id or 'غير متوفر'}")
-        
+    
+        # --- معلومات إضافية ---
         with st.expander("📊 معلومات إضافية"):
             col3, col4 = st.columns(2)
             with col3:
@@ -929,8 +932,10 @@ class ATSApp:
             with col4:
                 st.write("**معرّف الوظيفة (Job ID):**", candidate.job_id)
                 if candidate_folder_id:
-                    st.write("**مجلد المرشح على جوجل درايف:**", f"[فتح المجلد](https://drive.google.com/drive/folders/{candidate_folder_id})")
-        """Displays the candidate's test section with show/send options."""
+                    st.write("**مجلد المرشح على جوجل درايف:**",
+                             f"[فتح المجلد](https://drive.google.com/drive/folders/{candidate_folder_id})")
+    
+        # --- قسم اختبار المرشح ---
         with st.expander("🧠 اختبار المرشح", expanded=False):
             st.write("يمكنك هنا عرض أو إرسال اختبار المرشح.")
             col_test1, col_test2 = st.columns(2)
@@ -940,16 +945,10 @@ class ATSApp:
                 if st.button("📘 عرض أسئلة الاختبار", key=f"show_test_{candidate.email}"):
                     with st.spinner("جاري إنشاء أسئلة الاختبار..."):
                         try:
-                            # ✅ Create test questions using LLM
-                            from config import get_job_config
-                            from llm_utils import llm_json  # Ensure this exists in your utils
-                            config = get_job_config()
-    
                             quiz = llm_json(
                                 TEST_GEN_PROMPT.format(job_id=config['job_id']),
                                 expect_list=True
                             ) or []
-    
                             if quiz:
                                 st.markdown("#### 📝 أسئلة الاختبار:")
                                 for i, q in enumerate(quiz, start=1):
@@ -970,7 +969,7 @@ class ATSApp:
                 if st.button("📤 إرسال الاختبار إلى المرشح", key=f"send_test_{candidate.email}"):
                     with st.spinner("جاري إرسال الاختبار إلى المرشح..."):
                         try:
-                            state, success, links = self.node_send_tests(state)
+                            state, success, links = node_send_tests(state)
     
                             if success and candidate.email in links:
                                 form_link = links[candidate.email]
@@ -980,61 +979,62 @@ class ATSApp:
                                 st.error("❌ فشل في إرسال الاختبار إلى هذا المرشح.")
                         except Exception as e:
                             st.error(f"حدث خطأ أثناء إرسال الاختبار: {e}")
-    # قسم أسئلة المقابلة
-    with st.expander("❓ أسئلة المقابلة", expanded=True):
-        questions_content = self.get_interview_questions(candidate)
-        if questions_content.startswith("Error") or "not found" in questions_content:
-            st.info("لم يتم العثور على أسئلة مقابلة.")
-        else:
-            formatted_questions = self.format_questions_as_markdown(questions_content)
-            st.markdown(formatted_questions)
     
-    # قسم إعادة إنشاء الأسئلة
-    with st.expander("🔄 إعادة إنشاء أسئلة المقابلة"):
-        st.write("**خيارات إنشاء الأسئلة:**")
-        col1, col2 = st.columns(2)
+        # --- قسم أسئلة المقابلة ---
+        with st.expander("❓ أسئلة المقابلة", expanded=True):
+            questions_content = self.get_interview_questions(candidate)
+            if questions_content.startswith("Error") or "not found" in questions_content:
+                st.info("لم يتم العثور على أسئلة مقابلة.")
+            else:
+                formatted_questions = self.format_questions_as_markdown(questions_content)
+                st.markdown(formatted_questions)
     
-        with col1:
-            mode_options = {
-                "job_requirements": "إنشاء جديد حسب متطلبات الوظيفة فقط",
-                "cv": "إنشاء جديد حسب السيرة الذاتيه",
-                "both": "إنشاء جديد حسب الاثنين معاً"
-            }
-
-            with st.form(key=f"regen_form_{candidate.email}"):
-                selected_mode = st.selectbox(
-                    "اختر طريقة الإنشاء:",
-                    options=list(mode_options.keys()),
-                    format_func=lambda x: mode_options[x],
-                    key=f"mode_{candidate.email}"
-                )
-
-                regenerate_btn = st.form_submit_button("🔄 إعادة إنشاء الأسئلة")
-
-                if regenerate_btn:
-                    with st.spinner("جاري إنشاء أسئلة جديدة..."):
-                        success = self.regenerate_interview_questions(candidate, mode=selected_mode)
-                        if success:
-                            st.success("تم إنشاء أسئلة جديدة بنجاح!")
-                            st.rerun()
-                        else:
-                            st.error("فشل في إنشاء الأسئلة الجديدة")
-        
-        with col2:
-            st.info("""
-            **ملاحظة:** 
-            - سيتم إنشاء أسئلة جديدة وحفظها في مجلد المرشح  
-            - الأسئلة القديمة سيتم استبدالها  
-            - يمكنك اختيار الأساس الذي تريد إنشاء الأسئلة عليه
-            """)
-
-    with st.expander("📝 التقرير الكامل والتحليل"):
-        report_content = self.get_candidate_report(candidate)
-        if report_content.startswith("Error") or "not found" in report_content:
-            st.info("لم يتم العثور على تقرير للمرشح.")
-        else:
-            st.markdown(f'<div class="report-section">{report_content}</div>', unsafe_allow_html=True)
-
+        # --- إعادة إنشاء أسئلة المقابلة ---
+        with st.expander("🔄 إعادة إنشاء أسئلة المقابلة"):
+            st.write("**خيارات إنشاء الأسئلة:**")
+            col1, col2 = st.columns(2)
+    
+            with col1:
+                mode_options = {
+                    "job_requirements": "إنشاء جديد حسب متطلبات الوظيفة فقط",
+                    "cv": "إنشاء جديد حسب السيرة الذاتية",
+                    "both": "إنشاء جديد حسب الاثنين معاً"
+                }
+    
+                with st.form(key=f"regen_form_{candidate.email}"):
+                    selected_mode = st.selectbox(
+                        "اختر طريقة الإنشاء:",
+                        options=list(mode_options.keys()),
+                        format_func=lambda x: mode_options[x],
+                        key=f"mode_{candidate.email}"
+                    )
+    
+                    regenerate_btn = st.form_submit_button("🔄 إعادة إنشاء الأسئلة")
+    
+                    if regenerate_btn:
+                        with st.spinner("جاري إنشاء أسئلة جديدة..."):
+                            success = self.regenerate_interview_questions(candidate, mode=selected_mode)
+                            if success:
+                                st.success("تم إنشاء أسئلة جديدة بنجاح!")
+                                st.rerun()
+                            else:
+                                st.error("فشل في إنشاء الأسئلة الجديدة")
+    
+            with col2:
+                st.info("""
+                **ملاحظة:** 
+                - سيتم إنشاء أسئلة جديدة وحفظها في مجلد المرشح  
+                - الأسئلة القديمة سيتم استبدالها  
+                - يمكنك اختيار الأساس الذي تريد إنشاء الأسئلة عليه
+                """)
+    
+        # --- التقرير الكامل ---
+        with st.expander("📝 التقرير الكامل والتحليل"):
+            report_content = self.get_candidate_report(candidate)
+            if report_content.startswith("Error") or "not found" in report_content:
+                st.info("لم يتم العثور على تقرير للمرشح.")
+            else:
+                st.markdown(f'<div class="report-section">{report_content}</div>', unsafe_allow_html=True)
 
 def main():
     st.sidebar.title("📋 نظام التوظيف الذكي")
@@ -1313,6 +1313,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
