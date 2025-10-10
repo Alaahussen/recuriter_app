@@ -1,6 +1,6 @@
 # streamlit_app.py
 __import__('pysqlite3')
-import sys
+import s
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import streamlit as st
 import os
@@ -867,7 +867,7 @@ class ATSApp:
                 if st.button("📤 إرسال الاختبار إلى المرشح", key=f"send_test_{candidate.email}"):
                     with st.spinner("جاري إرسال الاختبار إلى المرشح..."):
                         try:
-                            state, success, links =node_send_tests(state)
+                            state, success, links =node_send_tests(self.state)
     
                             if success and candidate.email in links:
                                 form_link = links[candidate.email]
@@ -1211,6 +1211,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
