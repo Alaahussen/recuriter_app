@@ -41,9 +41,9 @@ def evaluate_cv_node(state: PipelineState) -> PipelineState:
 
         # --- Assign status ---
         if candidate.overall_score >= interview_threshold:
-            candidate.status = "Pending"
+            candidate.Final_evaluation = "Interview Step"
         else:
-            candidate.status = "Under Threshold"
+            candidate.Final_evaluation = "Under Threshold"
 
         print(f"✅ Evaluated {getattr(candidate, 'name', 'Unknown')}: "
               f"CV={candidate.cv_score}, Test={candidate.test_score}, "
@@ -59,7 +59,7 @@ def evaluate_cv_node(state: PipelineState) -> PipelineState:
                         spreadsheetId=state.sheet_id,
                         range=update_range,
                         valueInputOption="RAW",
-                        body={"values": [[candidate.status]]},
+                        body={"values": [[candidate.Final_evaluation]]},
                     ).execute()
         except Exception as e:
             print(f"⚠️ Warning while updating Google Sheets for {candidate.email}: {e}")
@@ -104,4 +104,5 @@ def build_graph(evaluation_mode="تقييم السيرة الذاتية فقط")
     os.environ["EVALUATION_MODE"] = evaluation_mode
 
     return g.compile()
+
 
