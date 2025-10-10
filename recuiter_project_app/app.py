@@ -12,7 +12,7 @@ from models import PipelineState, Candidate
 from Graph import build_graph
 from dotenv import load_dotenv
 from config import get_job_config
-from Utils import save_to_env
+from Utils import *
 import io
 import re
 from googleapiclient.http import MediaIoBaseUpload
@@ -20,10 +20,7 @@ from config import *
 from Featch_cv import normalize_arabic_text
 # استيراد الدوال الموجودة
 from Google_services import google_services
-from Drive import (
-    ensure_drive_folder, ensure_sheet, get_candidate_from_sheet,
-    find_candidate_row_by_email, read_drive_file_text
-)
+from Drive import *
 
 # تحميل متغيرات البيئة
 import os
@@ -800,93 +797,250 @@ class ATSApp:
             
             st.success("تم تسجيل الخروج بنجاح!")
             st.rerun()
+    def node_send_tests(self,state: PipelineState) -> Tuple[PipelineState, bool, dict]:
+        """
+        Sends technical tests to candidates via Google Forms and email.
+    
+        Returns:
+            (state, success_flag, form_links)
+            - success_flag (bool): True if at least one test was sent successfully.
+            - form_links (dict): {candidate_email: form_link} for successfully created tests.
+        """
+        config = get_job_config()
+        gmail, calendar, drive, sheets, forms = google_services()
+    
+        deadline = (datetime.now(UTC) + timedelta(days=2)).strftime('%Y-%m-%d')
+    
+        # generate test per role
+        quiz = llm_json(TEST_GEN_PROMPT.format(job_id=config['job_id']), expect_list=True) or []
+    
+        success_flag = False
+        form_links = {}
+    
+        for c in state.candidates:
+            if c.status != 'classified' or getattr(c, "form_id", None):
+                continue
+    
+            try:
+                # Step 1: Create a Google Form for this candidate
+                form_body = {
+                    "info": {
+                        "title": f"{config['job_title']} - Technical Quiz",
+                        "documentTitle": f"Quiz for {c.name or 'Candidate'}"
+                    }
+                }
+                form = forms.forms().create(body=form_body).execute()
+                form_id = form["formId"]
+    
+                # Step 2: Add questions to the form
+                requests = []
+                for i, q in enumerate(quiz):
+                    qtxt = q.get("question") if isinstance(q, dict) else str(q)
+                    opts = q.get("options", []) if isinstance(q, dict) else []
+    
+                    question_item = {
+                        "title": qtxt,
+                        "questionItem": {
+                            "question": {
+                                "required": True,
+                            }
+                        }
+                    }
+    
+                    if opts:  # Multiple-choice
+                        question_item["questionItem"]["question"]["choiceQuestion"] = {
+                            "type": "RADIO",
+                            "options": [{"value": o} for o in opts],
+                            "shuffle": True,
+                        }
+    
+                    requests.append({
+                        "createItem": {
+                            "item": question_item,
+                            "location": {"index": i}
+                        }
+                    })
+    
+                if requests:
+                    forms.forms().batchUpdate(formId=form_id, body={"requests": requests}).execute()
+    
+                # Step 3: Build form URL
+                form_link = f"https://docs.google.com/forms/d/{form_id}/viewform"
+    
+                # Step 4: Send email to candidate
+                body = config['templates']['test'].format(
+                    name=c.name or 'Candidate',
+                    test_link=form_link,
+                    deadline=deadline
+                )
+                _send_gmail_direct(gmail, c.email, f"{config['job_id']} - Technical Quiz", body)
+    
+                # Step 5: Store formId + quiz in candidate notes
+                c.status = 'test_sent'
+                c.form_id = form_id
+                c.notes = json.dumps({
+                    "form_id": form_id,
+                    "quiz": quiz
+                }, ensure_ascii=False)
+    
+                # Track success
+                form_links[c.email] = form_link
+                success_flag = True
+    
+                # Update the candidate row in the sheet
+                try:
+                    row_index = find_candidate_row_by_email(sheets, state.sheet_id, c.email)
+                    if row_index:
+                        update_candidate_row_links(sheets, state.sheet_id, row_index, form_id, form_link, "")
+                except Exception as e:
+                    logger.warning(f"Failed to update candidate row with form ID: {e}")
+    
+            except Exception as e:
+                logger.warning(f"Failed to send test to {c.email}: {e}")
+    
+        return state, success_flag, form_links
 
     def display_candidate_details(self, candidate: Candidate):
-        candidate_folder_id = self.get_candidate_folder_id(candidate)
-        
-        st.markdown(f"### 📋 تفاصيل المتقدم: {candidate.name or candidate.email}")
-        
+    candidate_folder_id = self.get_candidate_folder_id(candidate)
+    
+    st.markdown(f"### 📋 تفاصيل المتقدم: {candidate.name or candidate.email}")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.info(f"**البريد الإلكتروني:** {candidate.email}")
+        st.info(f"**المدينة:** {candidate.city or 'غير متوفر'}")
+    
+    with col2:
+        if candidate.cv_score is not None:
+            st.success(f"**تقييم السيرة الذاتية:** {candidate.cv_score}/100")
+        if candidate.test_score is not None:
+            st.success(f"**نتيجة الاختبار:** {candidate.test_score}/100")
+        if candidate.overall_score is not None:
+            st.success(f"**التقييم الكلي:** {candidate.overall_score}/100")
+        st.success(f"**الوظيفة المتقدم لها:** {candidate.job_id or 'غير متوفر'}")
+    
+    with st.expander("📊 معلومات إضافية"):
+        col3, col4 = st.columns(2)
+        with col3:
+            st.write("**المؤهل العلمي:**", candidate.degree or "غير متوفر")
+            st.write("**الخبرة:**", candidate.experience or "غير متوفر")
+            st.write("**الشهادات:**", ", ".join(candidate.certifications) or "لا توجد")
+        with col4:
+            st.write("**معرّف الوظيفة (Job ID):**", candidate.job_id)
+            if candidate_folder_id:
+                st.write("**مجلد المرشح على جوجل درايف:**", f"[فتح المجلد](https://drive.google.com/drive/folders/{candidate_folder_id})")
+
+    # 🧩 قسم الاختبار الجديد
+    from datetime import datetime, timedelta, UTC
+import json
+import streamlit as st
+
+def display_candidate_test_section(self, candidate, state):
+    """Displays the candidate's test section with show/send options."""
+    with st.expander("🧠 اختبار المرشح", expanded=False):
+        st.write("يمكنك هنا عرض أو إرسال اختبار المرشح.")
+        col_test1, col_test2 = st.columns(2)
+
+        # --- عرض أسئلة الاختبار ---
+        with col_test1:
+            if st.button("📘 عرض أسئلة الاختبار", key=f"show_test_{candidate.email}"):
+                with st.spinner("جاري إنشاء أسئلة الاختبار..."):
+                    try:
+                        # ✅ Create test questions using LLM
+                        from config import get_job_config
+                        from llm_utils import llm_json  # Ensure this exists in your utils
+                        config = get_job_config()
+
+                        quiz = llm_json(
+                            TEST_GEN_PROMPT.format(job_id=config['job_id']),
+                            expect_list=True
+                        ) or []
+
+                        if quiz:
+                            st.markdown("#### 📝 أسئلة الاختبار:")
+                            for i, q in enumerate(quiz, start=1):
+                                qtxt = q.get("question") if isinstance(q, dict) else str(q)
+                                opts = q.get("options", []) if isinstance(q, dict) else []
+                                st.markdown(f"**{i}. {qtxt}**")
+                                if opts:
+                                    for opt in opts:
+                                        st.markdown(f"- {opt}")
+                                st.markdown("---")
+                        else:
+                            st.warning("لم يتم توليد أي أسئلة اختبار.")
+                    except Exception as e:
+                        st.error(f"حدث خطأ أثناء توليد الأسئلة: {e}")
+
+        # --- إرسال الاختبار إلى المرشح ---
+        with col_test2:
+            if st.button("📤 إرسال الاختبار إلى المرشح", key=f"send_test_{candidate.email}"):
+                with st.spinner("جاري إرسال الاختبار إلى المرشح..."):
+                    try:
+                        state, success, links = self.node_send_tests(state)
+
+                        if success and candidate.email in links:
+                            form_link = links[candidate.email]
+                            st.success(f"✅ تم إرسال الاختبار بنجاح إلى {candidate.name or candidate.email}!")
+                            st.markdown(f"📎 [عرض اختبار المرشح]({form_link})")
+                        else:
+                            st.error("❌ فشل في إرسال الاختبار إلى هذا المرشح.")
+                    except Exception as e:
+                        st.error(f"حدث خطأ أثناء إرسال الاختبار: {e}")
+    # قسم أسئلة المقابلة
+    with st.expander("❓ أسئلة المقابلة", expanded=True):
+        questions_content = self.get_interview_questions(candidate)
+        if questions_content.startswith("Error") or "not found" in questions_content:
+            st.info("لم يتم العثور على أسئلة مقابلة.")
+        else:
+            formatted_questions = self.format_questions_as_markdown(questions_content)
+            st.markdown(formatted_questions)
+    
+    # قسم إعادة إنشاء الأسئلة
+    with st.expander("🔄 إعادة إنشاء أسئلة المقابلة"):
+        st.write("**خيارات إنشاء الأسئلة:**")
         col1, col2 = st.columns(2)
-        
+    
         with col1:
-            st.info(f"**البريد الإلكتروني:** {candidate.email}")
-            st.info(f"**المدينة:** {candidate.city or 'غير متوفر'}")
+            mode_options = {
+                "job_requirements": "إنشاء جديد حسب متطلبات الوظيفة فقط",
+                "cv": "إنشاء جديد حسب السيرة الذاتيه",
+                "both": "إنشاء جديد حسب الاثنين معاً"
+            }
+
+            with st.form(key=f"regen_form_{candidate.email}"):
+                selected_mode = st.selectbox(
+                    "اختر طريقة الإنشاء:",
+                    options=list(mode_options.keys()),
+                    format_func=lambda x: mode_options[x],
+                    key=f"mode_{candidate.email}"
+                )
+
+                regenerate_btn = st.form_submit_button("🔄 إعادة إنشاء الأسئلة")
+
+                if regenerate_btn:
+                    with st.spinner("جاري إنشاء أسئلة جديدة..."):
+                        success = self.regenerate_interview_questions(candidate, mode=selected_mode)
+                        if success:
+                            st.success("تم إنشاء أسئلة جديدة بنجاح!")
+                            st.rerun()
+                        else:
+                            st.error("فشل في إنشاء الأسئلة الجديدة")
         
         with col2:
-            if candidate.cv_score is not None:
-                st.success(f"**تقييم السيرة الذاتية:** {candidate.cv_score}/100")
-            if candidate.test_score is not None:
-                st.success(f"**نتيجة الاختبار:** {candidate.test_score}/100")
-            if candidate.overall_score is not None:
-                st.success(f"**التقييم الكلي:** {candidate.overall_score}/100")
-            st.success(f"**الوظيفة المتقدم لها:** {candidate.job_id or 'غير متوفر'}")
-        
-        with st.expander("📊 معلومات إضافية"):
-            col3, col4 = st.columns(2)
-            with col3:
-                st.write("**المؤهل العلمي:**", candidate.degree or "غير متوفر")
-                st.write("**الخبرة:**", candidate.experience or "غير متوفر")
-                st.write("**الشهادات:**", ", ".join(candidate.certifications) or "لا توجد")
-            with col4:
-                st.write("**معرّف الوظيفة (Job ID):**", candidate.job_id)
-                if candidate_folder_id:
-                    st.write("**مجلد المرشح على جوجل درايف:**", f"[فتح المجلد](https://drive.google.com/drive/folders/{candidate_folder_id})")
-        
-        # قسم أسئلة المقابلة
-        with st.expander("❓ أسئلة المقابلة", expanded=True):
-            questions_content = self.get_interview_questions(candidate)
-            if questions_content.startswith("Error") or "not found" in questions_content:
-                st.info("لم يتم العثور على أسئلة مقابلة.")
-            else:
-                formatted_questions = self.format_questions_as_markdown(questions_content)
-                st.markdown(formatted_questions)
-        
-        # قسم إعادة إنشاء الأسئلة
-        with st.expander("🔄 إعادة إنشاء أسئلة المقابلة"):
-            st.write("**خيارات إنشاء الأسئلة:**")
-            col1, col2 = st.columns(2)
-        
-            with col1:
-                mode_options = {
-                    "job_requirements": "إنشاء جديد حسب متطلبات الوظيفة فقط",
-                    "cv": "إنشاء جديد حسب السيرة الذاتيه",
-                    "both": "إنشاء جديد حسب الاثنين معاً"
-                }
+            st.info("""
+            **ملاحظة:** 
+            - سيتم إنشاء أسئلة جديدة وحفظها في مجلد المرشح  
+            - الأسئلة القديمة سيتم استبدالها  
+            - يمكنك اختيار الأساس الذي تريد إنشاء الأسئلة عليه
+            """)
 
-                # ✅ التفاف في نموذج لتجنب تعارض إعادة التشغيل
-                with st.form(key=f"regen_form_{candidate.email}"):
-                    selected_mode = st.selectbox(
-                        "اختر طريقة الإنشاء:",
-                        options=list(mode_options.keys()),
-                        format_func=lambda x: mode_options[x],
-                        key=f"mode_{candidate.email}"
-                    )
-
-                    regenerate_btn = st.form_submit_button("🔄 إعادة إنشاء الأسئلة")
-
-                    if regenerate_btn:
-                        with st.spinner("جاري إنشاء أسئلة جديدة..."):
-                            success = self.regenerate_interview_questions(candidate, mode=selected_mode)
-                            if success:
-                                st.success("تم إنشاء أسئلة جديدة بنجاح!")
-                                st.rerun()
-                            else:
-                                st.error("فشل في إنشاء الأسئلة الجديدة")
-            
-            with col2:
-                st.info("""
-                **ملاحظة:** 
-                - سيتم إنشاء أسئلة جديدة وحفظها في مجلد المرشح  
-                - الأسئلة القديمة سيتم استبدالها  
-                - يمكنك اختيار الأساس الذي تريد إنشاء الأسئلة عليه
-                """)
-
-        with st.expander("📝 التقرير الكامل والتحليل"):
-            report_content = self.get_candidate_report(candidate)
-            if report_content.startswith("Error") or "not found" in report_content:
-                st.info("لم يتم العثور على تقرير للمرشح.")
-            else:
-                st.markdown(f'<div class="report-section">{report_content}</div>', unsafe_allow_html=True)
+    with st.expander("📝 التقرير الكامل والتحليل"):
+        report_content = self.get_candidate_report(candidate)
+        if report_content.startswith("Error") or "not found" in report_content:
+            st.info("لم يتم العثور على تقرير للمرشح.")
+        else:
+            st.markdown(f'<div class="report-section">{report_content}</div>', unsafe_allow_html=True)
 
 
 def main():
@@ -1028,11 +1182,7 @@ def main():
                 )
                 new_city = st.text_input("➕ أضف مدينة جديدة (اختياري):", placeholder="أدخل اسم مدينة جديدة")
                 job_requirements = st.text_area("🧾 متطلبات الوظيفة", height=100, placeholder="أدخل متطلبات الوظيفة...")
-
-                st.subheader("🧠 خيارات الاختبار")
-                send_tests_enabled = st.radio("هل تريد إرسال اختبارات للمرشحين؟", ["نعم", "لا"], index=0)
-                app.send_tests_enabled = True if send_tests_enabled == "نعم" else False
-
+                
                 st.subheader("📈 حدود التقييم")
                 interview_threshold = st.slider("\u200Fالحد الأدنى للمقابلة", 0, 100, int(os.getenv("INTERVIEW_THRESHOLD", 50)))
                 evaluation_mode = st.selectbox(
@@ -1170,6 +1320,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
