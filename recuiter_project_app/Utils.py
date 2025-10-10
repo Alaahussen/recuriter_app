@@ -95,7 +95,7 @@ def extract_city_from_form_data(form_data: dict) -> str:
         if provider == "gemini":
             # --- Google Gemini ---
             genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            model = genai.GenerativeModel("gemini-2.0-flash")
             response = model.generate_content(prompt)
             city = response.text.strip()
 
@@ -132,5 +132,6 @@ def assign_city_to_candidate(cand, form_data: dict):
     else:
         cand.city = ""
         logger.info(f"🚫 No city found for {cand.email}")
+
 
 
