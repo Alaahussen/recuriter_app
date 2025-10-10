@@ -465,6 +465,7 @@ class ATSApp:
                         certifications=candidate_data.get('certifications', []),
                         job_id=candidate_data.get('job_id', os.getenv("JOB_ID", "")),
                         status=candidate_data.get('status', 'received'),
+                        final_evaluation=candidate_data.get('final_evaluation'),
                         cv_score=float(cv_score) if cv_score is not None else 0.0,
                         test_score=float(test_score) if test_score is not None else 0.0,
                         overall_score=float(overall_score) if overall_score is not None else 0.0,
@@ -1327,6 +1328,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
