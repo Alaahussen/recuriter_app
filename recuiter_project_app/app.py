@@ -1,6 +1,6 @@
 # streamlit_app.py
 __import__('pysqlite3')
-import sys
+import s
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import streamlit as st
 import os
@@ -40,40 +40,85 @@ st.set_page_config(
 )
 # تنسيق CSS للغة العربية
 st.markdown("""
-  <style>
+<style>
+/* ===========================================================
+   🌗 Universal RTL + Theme-Aware Styling (Light & Dark Modes)
+   ===========================================================*/
+
+/* --- Define theme variables --- */
+:root {
+  --background-color: #ffffff;
+  --background-color-secondary: #f9fafb;
+  --text-color: #1e1e1e;
+  --accent-color: #facc15;
+  --accent-color-hover: #fde047;
+  --border-color: #e5e7eb;
+  --shadow-color: rgba(0, 0, 0, 0.08);
+}
+
+/* --- Dark mode overrides --- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background-color: #1e1e1e;
+    --background-color-secondary: #2a2a2a;
+    --text-color: #f5f5f5;
+    --accent-color: #eab308; /* gold but less saturated for dark bg */
+    --accent-color-hover: #facc15;
+    --border-color: #3a3a3a;
+    --shadow-color: rgba(0, 0, 0, 0.5);
+  }
+}
+
 /* ------------------------------
-   🌐 Global RTL + Light Theme Setup
+   🌐 Global RTL + Base Setup
 ---------------------------------*/
 html, body, [class*="css"] {
     font-family: 'Tajawal', 'Cairo', sans-serif !important;
     direction: rtl !important;
     text-align: right !important;
-    background-color: #ffffff !important; /* pure white background */
-    color: #1e1e1e !important; /* dark gray readable text */
+    background-color: var(--background-color) !important;
+    color: var(--text-color) !important;
 }
 
+/* Box container */
+.box {
+    background-color: var(--background-color-secondary);
+    color: var(--text-color);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+</style>
+
+<div class="box">
+    <p>هذا المربع يتكيف تلقائيًا مع وضع السمة 🌓</p>
+</div>
+
+<style>
 /* ------------------------------
    🧭 Sidebar Styling
 ---------------------------------*/
 [data-testid="stSidebar"] {
     direction: rtl !important;
     text-align: right !important;
-    background-color: #f9fafb !important; /* soft light gray */
-    color: #1e1e1e !important;
+    background-color: var(--background-color-secondary) !important;
+    color: var(--text-color) !important;
 }
 
 /* Sidebar inputs and labels */
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] .stRadio,
-[data-testid="stSidebar"] .stCheckbox 
-{ font-weight: 500; 
-font-size: 1rem; 
-color: #1e1e1e !important; }
-/* Slider styling — ensure numbers appear clearly */
+[data-testid="stSidebar"] .stCheckbox {
+    font-weight: 500;
+    font-size: 1rem;
+    color: var(--text-color) !important;
+}
+
+/* Slider styling */
 .stSlider {
-    direction: ltr !important; /* keep numbers visible */
+    direction: ltr !important;
     text-align: left !important;
-    color: #1e1e1e !important;
+    color: var(--text-color) !important;
 }
 
 /* ------------------------------
@@ -81,59 +126,56 @@ color: #1e1e1e !important; }
 ---------------------------------*/
 .main-header {
     font-size: 2.5rem;
-    color: #1f77b4;
+    color: var(--accent-color);
     text-align: center;
     margin-bottom: 2rem;
     font-weight: 700;
 }
 
 .metric-card, .candidate-card, .report-section {
-    background-color: #ffffff;
+    background-color: var(--background-color-secondary);
     border-radius: 0.75rem;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 4px var(--shadow-color);
     padding: 1.5rem;
     margin: 1rem 0;
-    color: #1e1e1e;
+    color: var(--text-color);
 }
 
 /* ------------------------------
    🖲️ Buttons
 ---------------------------------*/
 .stButton > button {
-    background-color: #facc15 !important; /* golden accent */
-    color: #1e1e1e !important;
+    background-color: var(--accent-color) !important;
+    color: var(--text-color) !important;
     font-weight: 600 !important;
     border-radius: 0.5rem !important;
     border: none !important;
 }
 .stButton > button:hover {
-    background-color: #fde047 !important; /* lighter gold hover */
+    background-color: var(--accent-color-hover) !important;
 }
 
 /* ------------------------------
-   📑 DataFrame Styling (LTR)
+   📑 DataFrame Styling
 ---------------------------------*/
 .dataframe, .dataframe table, .dataframe th, .dataframe td {
-    direction: ltr !important;       /* English text direction */
+    direction: ltr !important;
     text-align: left !important;
     unicode-bidi: plaintext !important;
     font-family: 'Segoe UI', 'Courier New', sans-serif !important;
 }
 
-/* Headers */
 .dataframe th {
-    background-color: #facc15 !important; /* gold header */
-    color: #1e1e1e !important;
+    background-color: var(--accent-color) !important;
+    color: var(--text-color) !important;
     font-weight: bold !important;
-    text-align: left !important;
 }
 
-/* Cells */
 .dataframe td {
-    background-color: #ffffff !important;
-    color: #1e1e1e !important;
-    border-bottom: 1px solid #e5e7eb !important;
+    background-color: var(--background-color-secondary) !important;
+    color: var(--text-color) !important;
+    border-bottom: 1px solid var(--border-color) !important;
 }
 
 /* ------------------------------
@@ -155,6 +197,8 @@ color: #1e1e1e !important; }
     direction: rtl !important;
     text-align: right !important;
     font-family: 'Tajawal', sans-serif !important;
+    background-color: var(--background-color-secondary) !important;
+    color: var(--text-color) !important;
 }
 
 /* ------------------------------
@@ -165,19 +209,16 @@ color: #1e1e1e !important; }
 }
 
 /* Tooltip + Radio + Checkbox */
-.stRadio > label {
-    gap: 4px !important; /* tighten space between button and text */
-}
-/* Make checkboxes smaller */
+.stRadio > label { gap: 4px !important; }
 .stCheckbox > label {
-        direction: rtl;
-        text-align: right;
-        padding-right: 4px;
-        gap: 4px !important;
-    }
-
+    direction: rtl;
+    text-align: right;
+    padding-right: 4px;
+    gap: 4px !important;
+}
 </style>
 """, unsafe_allow_html=True)
+
 
 class ATSApp:
     def __init__(self):
@@ -1129,6 +1170,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
