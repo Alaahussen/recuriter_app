@@ -1,7 +1,7 @@
 # streamlit_app.py
 __import__('pysqlite3')
 import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3'
 import streamlit as st
 import os
 import json
@@ -718,7 +718,7 @@ class ATSApp:
                 return False, ""
                 
             email_result = _send_gmail_direct(gmail, candidate.email, f"{config['job_id']} - Technical Quiz", body)
-            st.success("✅ تم إرسال البريد الإلكتروني")
+            #st.success("✅ تم إرسال البريد الإلكتروني")
     
             # Step 6: Update candidate status
             candidate.status = 'test_sent'
@@ -738,7 +738,7 @@ class ATSApp:
             except Exception as e:
                 st.warning(f"⚠️ فشل تحديث الجدول: {e}")
     
-            #st.success(f"🎉 تم إرسال الاختبار بنجاح لـ {candidate.email}")
+            st.success(f"🎉 تم إرسال الاختبار بنجاح لـ {candidate.email}")
             return True, form_link
     
         except Exception as e:
@@ -847,8 +847,8 @@ class ATSApp:
         total_candidates = len(candidates)
         interviewed = len([c for c in candidates if c.status == 'interview_scheduled'])
         rejected = len([c for c in candidates if c.status == 'rejected'])
-        tested = len([c for c in candidates if c.test_score is not None])
-        high_score = len([c for c in candidates if c.overall_score and c.overall_score >= 70])
+        tested = len([c for c in candidates if c.status == 'tested'])
+        high_score = len([c for c in candidates if c.Final_evaluation=='Interview Step'])
         
         with col1:
             st.metric("إجمالي المرشحين", total_candidates)
@@ -869,7 +869,7 @@ class ATSApp:
             'rejected': 'مرفوض',
             'accepted': 'مقبول',
             'test_sent': 'تم إرسال الاختبار',
-            'test_completed': 'تم إكمال الاختبار'
+            'tested': 'تم إكمال الاختبار'
         }
         return status_map.get(status, status)
 
@@ -985,7 +985,7 @@ class ATSApp:
                             success, form_link = self.node_send_tests(candidate)
                             logger.info(success)
                             if success:
-                                st.success(f"✅ تم إرسال الاختبار بنجاح إلى {candidate.name or candidate.email}!")
+                                #st.success(f"✅ تم إرسال الاختبار بنجاح إلى {candidate.name or candidate.email}!")
                                 st.markdown(f"📎 [عرض اختبار المرشح]({form_link})")
                             else:
                                 st.error("❌ فشل في إرسال الاختبار إلى هذا المرشح.")
@@ -1292,7 +1292,8 @@ def main():
                         "الحالة": app.get_arabic_status(candidate.status),
                         "تقييم السيرة": candidate.cv_score or 0,
                         "نتيجة الاختبار": candidate.test_score or 0,
-                        "التقييم النهائي": candidate.overall_score or 0
+                        "التقييم النهائي": candidate.overall_score or 0,
+                        "الحالة النهائيه": candidate.Final_evaluation
                     })
                 if status_data:
                     df = pd.DataFrame(status_data)
@@ -1325,6 +1326,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
