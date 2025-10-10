@@ -25,7 +25,7 @@ def evaluate_cv_node(state: PipelineState) -> PipelineState:
         # --- Safe extraction of attributes ---
         candidate.cv_score = float(getattr(candidate, "cv_score", 0.0) or 0.0)
         candidate.test_score = float(getattr(candidate, "test_score", 0.0) or 0.0)
-        candidate.status = getattr(candidate, "status", "Pending")
+        #candidate.status = getattr(candidate, "status", "Pending")
 
         # --- Calculate overall score based on evaluation mode ---
         if evaluation_mode in ("cv_only", "تقييم السيرة الذاتية فقط"):
@@ -104,3 +104,4 @@ def build_graph(evaluation_mode="تقييم السيرة الذاتية فقط")
     os.environ["EVALUATION_MODE"] = evaluation_mode
 
     return g.compile()
+
