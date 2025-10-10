@@ -634,42 +634,28 @@ class ATSApp:
         """إرسال اختبار لمرشح واحد وإرجاع نجاح العملية ورابط النموذج"""
         try:
             config = get_job_config()
-            st.info(f"🔧 بدء إرسال اختبار لـ {candidate.email}")
-            
             services = self.get_google_services()
             if not services:
-                st.error("❌ خدمات Google غير متوفرة")
                 return False, ""
                 
             gmail, calendar, drive, sheets, forms = services
             
-            deadline = (datetime.now() + timedelta(days=2)).strftime('%Y-%m-%d')
-            
-            # Step 1: Generate quiz
-            #st.info("🔄 جاري إنشاء الأسئلة...")
+            # إنشاء الاختبار
             quiz = llm_json(TEST_GEN_PROMPT.format(job_id=config['job_id']), expect_list=True) or []
-            
             if not quiz:
-                st.error("❌ فشل في إنشاء الأسئلة - quiz فارغ")
                 return False, ""
-            
-            #st.success(f"✅ تم إنشاء {len(quiz)} سؤال")
-            
-            # Step 2: Create Google Form
-            st.info("📝 جاري إنشاء نموذج Google...")
+    
+            # إنشاء نموذج Google
             form_body = {
                 "info": {
                     "title": f"{config.get('job_title', 'Technical Quiz')} - Technical Quiz",
                     "documentTitle": f"Quiz for {candidate.name or 'Candidate'}"
                 }
             }
-            
             form = forms.forms().create(body=form_body).execute()
             form_id = form["formId"]
-            #st.success(f"✅ تم إنشاء النموذج: {form_id}")
     
-            # Step 3: Add questions to form
-            #st.info("📋 جاري إضافة الأسئلة للنموذج...")
+            # إضافة الأسئلة للنموذج
             requests = []
             for i, q in enumerate(quiz):
                 qtxt = q.get("question") if isinstance(q, dict) else str(q)
@@ -684,7 +670,7 @@ class ATSApp:
                     }
                 }
     
-                if opts:  # Multiple-choice
+                if opts:
                     question_item["questionItem"]["question"]["choiceQuestion"] = {
                         "type": "RADIO",
                         "options": [{"value": o} for o in opts],
@@ -700,52 +686,48 @@ class ATSApp:
     
             if requests:
                 forms.forms().batchUpdate(formId=form_id, body={"requests": requests}).execute()
-                #st.success(f"✅ تم إضافة {len(requests)} سؤال للنموذج")
     
-            # Step 4: Build form URL
             form_link = f"https://docs.google.com/forms/d/{form_id}/viewform"
-            #st.success(f"🔗 رابط النموذج: {form_link}")
     
-            # Step 5: Send email
-            st.info("📧 جاري إرسال البريد الإلكتروني...")
+            # إرسال البريد الإلكتروني
+            deadline = (datetime.now() + timedelta(days=2)).strftime('%Y-%m-%d')
             body = config.get('templates', {}).get('test', '').format(
                 name=candidate.name or 'Candidate',
                 test_link=form_link,
                 deadline=deadline
             )
-            
-            if not body:
-                st.error("❌ قالب البريد الإلكتروني غير موجود")
-                return False, ""
-                
-            email_result = _send_gmail_direct(gmail, candidate.email, f"{config['job_id']} - Technical Quiz", body)
-            #st.success("✅ تم إرسال البريد الإلكتروني")
+            _send_gmail_direct(gmail, candidate.email, f"{config['job_id']} - Technical Quiz", body)
     
-            # Step 6: Update candidate status
+            # تحديث بيانات المرشح في state
             candidate.status = 'test_sent'
             candidate.form_id = form_id
             candidate.notes = json.dumps({
                 "form_id": form_id,
-                "quiz": quiz
+                "quiz": quiz,
+                "test_sent_at": datetime.now().isoformat()
             }, ensure_ascii=False)
-
-            # Update the candidate row in the sheet
-            try:
-                row_index = find_candidate_row_by_email(sheets, state.sheet_id, candidate.email)
-                if row_index:
-                    update_candidate_row_links(sheets, state.sheet_id, row_index, form_id, form_link, "")
-            except Exception as e:
-                logger.warning(f"Failed to update candidate row with form ID: {e}")
-            except Exception as e:
-                st.warning(f"⚠️ فشل تحديث الجدول: {e}")
     
-            st.success(f"🎉 تم إرسال الاختبار بنجاح لـ {candidate.email}")
+            # تحديث الـ Sheet مباشرة
+            sheet_id = self.sheet_id or st.session_state.get('sheet_id')
+            if sheet_id:
+                row_index = find_candidate_row_by_email(sheets, sheet_id, candidate.email)
+                if row_index:
+                    # تحديث الحالة والملاحظات في الـ Sheet
+                    update_range = f"Candidates!L{row_index}:M{row_index}"  # L: Status, M: Notes
+                    sheets.spreadsheets().values().update(
+                        spreadsheetId=sheet_id,
+                        range=update_range,
+                        valueInputOption="RAW",
+                        body={"values": [[candidate.status, candidate.notes]]},
+                    ).execute()
+                    
+                    # تحديث رابط الاختبار
+                    update_candidate_row_links(sheets, sheet_id, row_index, form_id, form_link, "")
+    
             return True, form_link
     
         except Exception as e:
-            error_msg = f"❌ فشل إرسال الاختبار لـ {candidate.email}: {str(e)}"
-            st.error(error_msg)
-            print(f"DEBUG ERROR: {error_msg}")
+            print(f"❌ فشل إرسال الاختبار: {e}")
             return False, ""
     def regenerate_interview_questions(self, candidate: Candidate, mode: str = "both") -> bool:
         """إعادة إنشاء أسئلة المقابلة بناءً على الوضع المحدد (cv / job_requirements / both)."""
@@ -1326,6 +1308,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
