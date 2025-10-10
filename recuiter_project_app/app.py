@@ -956,11 +956,11 @@ class ATSApp:
                         try:
                             success, form_link = self.node_send_tests(candidate)
                             logger.info(success)
-                                if success:
-                                    st.success(f"✅ تم إرسال الاختبار بنجاح إلى {candidate.name or candidate.email}!")
-                                    st.markdown(f"📎 [عرض اختبار المرشح]({form_link})")
-                                else:
-                                    st.error("❌ فشل في إرسال الاختبار إلى هذا المرشح.")
+                            if success:
+                                st.success(f"✅ تم إرسال الاختبار بنجاح إلى {candidate.name or candidate.email}!")
+                                st.markdown(f"📎 [عرض اختبار المرشح]({form_link})")
+                            else:
+                                st.error("❌ فشل في إرسال الاختبار إلى هذا المرشح.")
                         except Exception as e:
                             st.error(f"حدث خطأ أثناء إرسال الاختبار: {e}")
     
@@ -1297,6 +1297,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
