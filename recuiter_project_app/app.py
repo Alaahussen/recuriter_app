@@ -1,7 +1,7 @@
 # streamlit_app.py
 __import__('pysqlite3')
 import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3'
 import streamlit as st
 import os
 import json
@@ -13,7 +13,6 @@ from Graph import build_graph
 from dotenv import load_dotenv
 from config import get_job_config
 from Utils import *
-from Scores import node_send_tests
 import io
 import re
 from googleapiclient.http import MediaIoBaseUpload
@@ -632,19 +631,23 @@ class ATSApp:
         st.session_state.candidates = []
     def node_send_tests(self, candidate: Candidate) -> Tuple[bool, str]:
         """إرسال اختبار لمرشح واحد وإرجاع نجاح العملية ورابط النموذج"""
-        config = get_job_config()
-        gmail, calendar, drive, sheets, forms = google_services()
-    
-        deadline = (datetime.now(UTC) + timedelta(days=2)).strftime('%Y-%m-%d')
-    
-        # generate test per role
-        quiz = llm_json(TEST_GEN_PROMPT.format(job_id=config['job_id']), expect_list=True) or []
-    
-        # Check if candidate is eligible for test
-        if candidate.status != 'classified' or getattr(candidate, 'form_id', None):
-            return False, ""
-    
         try:
+            config = get_job_config()
+            services = self.get_google_services()
+            if not services:
+                return False, ""
+                
+            gmail, calendar, drive, sheets, forms = services
+        
+            deadline = (datetime.now() + timedelta(days=2)).strftime('%Y-%m-%d')
+        
+            # generate test per role
+            quiz = llm_json(TEST_GEN_PROMPT.format(job_id=config['job_id']), expect_list=True) or []
+        
+            # Check if candidate is eligible for test
+            if candidate.status != 'classified' or getattr(candidate, 'form_id', None):
+                return False, ""
+        
             # Step 1: Create a Google Form for this candidate
             form_body = {
                 "info": {
@@ -698,13 +701,9 @@ class ATSApp:
             )
             _send_gmail_direct(gmail, candidate.email, f"{config['job_id']} - Technical Quiz", body)
     
-            # Step 5: Store formId + quiz in candidate notes
+            # Step 5: Update candidate status
             candidate.status = 'test_sent'
             candidate.form_id = form_id
-            candidate.notes = json.dumps({
-                "form_id": form_id,
-                "quiz": quiz
-            }, ensure_ascii=False)
     
             # Update the candidate row in the sheet
             try:
@@ -714,12 +713,12 @@ class ATSApp:
                     if row_index:
                         update_candidate_row_links(sheets, sheet_id, row_index, form_id, form_link, "")
             except Exception as e:
-                logger.warning(f"Failed to update candidate row with form ID: {e}")
+                print(f"Warning: Failed to update candidate row: {e}")
     
             return True, form_link
     
         except Exception as e:
-            logger.warning(f"Failed to send test to {candidate.email}: {e}")
+            print(f"Failed to send test to {candidate.email}: {e}")
             return False, ""
     def regenerate_interview_questions(self, candidate: Candidate, mode: str = "both") -> bool:
         """إعادة إنشاء أسئلة المقابلة بناءً على الوضع المحدد (cv / job_requirements / both)."""
@@ -955,15 +954,13 @@ class ATSApp:
                 if st.button("📤 إرسال الاختبار إلى المرشح", key=f"send_test_{candidate.email}"):
                     with st.spinner("جاري إرسال الاختبار إلى المرشح..."):
                         try:
-                            success, links =self.node_send_tests(candidate)
+                            success, form_link = self.node_send_tests(candidate)
                             logger.info(success)
-                            logger.info(links)
-                            if success and candidate.email in links:
-                                form_link = links[candidate.email]
-                                st.success(f"✅ تم إرسال الاختبار بنجاح إلى {candidate.name or candidate.email}!")
-                                st.markdown(f"📎 [عرض اختبار المرشح]({form_link})")
-                            else:
-                                st.error("❌ فشل في إرسال الاختبار إلى هذا المرشح.")
+                                if success:
+                                    st.success(f"✅ تم إرسال الاختبار بنجاح إلى {candidate.name or candidate.email}!")
+                                    st.markdown(f"📎 [عرض اختبار المرشح]({form_link})")
+                                else:
+                                    st.error("❌ فشل في إرسال الاختبار إلى هذا المرشح.")
                         except Exception as e:
                             st.error(f"حدث خطأ أثناء إرسال الاختبار: {e}")
     
@@ -1300,6 +1297,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
