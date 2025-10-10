@@ -13,16 +13,14 @@ from Graph import build_graph
 from dotenv import load_dotenv
 from config import get_job_config
 from Utils import *
-from Scores import *
+from Scores import node_send_tests
 import io
 import re
 from googleapiclient.http import MediaIoBaseUpload
 from config import *
 from Featch_cv import normalize_arabic_text
-# استيراد الدوال الموجودة
 from Google_services import google_services
 from Drive import *
-
 # تحميل متغيرات البيئة
 import os
 os.environ["MALLOC_TRIM_THRESHOLD_"] = "0"
@@ -1211,6 +1209,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
