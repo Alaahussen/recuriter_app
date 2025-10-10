@@ -56,162 +56,166 @@ def normalize_arabic_text(t: str) -> str:
         return t
 
 
+import re
+import os
+import logging
+from openai import OpenAI
+import google.generativeai as genai
+
+logger = logging.getLogger(__name__)
+
 def intelligent_job_match(text: str, job_id: str) -> bool:
     """
-    Intelligent job ID matching using only regex and text normalization (no LLM).
-    Supports Arabic and English text matching with multiple fallback strategies.
+    Intelligent job ID matching with both rule-based (regex) and semantic (LLM) understanding.
+    - Uses normalization, regex, and context-aware patterns for Arabic and English.
+    - Falls back to OpenAI or Gemini to semantically infer job relevance.
     """
+
     if not text or not job_id:
         return False
 
     # --------------------------------------------------
-    # 1️⃣ Normalize Arabic & English text
+    # 1️⃣ Normalize text
     # --------------------------------------------------
+    def normalize_arabic_text(s):
+        if not s:
+            return ""
+        s = re.sub(r'[إأٱآا]', 'ا', s)
+        s = re.sub(r'[يى]', 'ي', s)
+        s = re.sub(r'[ةه]', 'ه', s)
+        s = re.sub(r'[^\w\s\u0600-\u06FF]', '', s)
+        return s.strip()
+
     text_norm = normalize_arabic_text(text)
     job_norm = normalize_arabic_text(job_id)
-
-    # Convert to lowercase for case-insensitive matching
     text_lower = text_norm.lower()
     job_lower = job_norm.lower()
 
     # --------------------------------------------------
-    # 2️⃣ Exact match (fastest)
+    # 2️⃣ Fast exact and regex-based matches
     # --------------------------------------------------
     if job_lower in text_lower:
         logger.info(f"✅ EXACT MATCH: Found '{job_id}' in text")
         return True
 
-    # --------------------------------------------------
-    # 3️⃣ Regex-based search with job context
-    # --------------------------------------------------
     escaped_job = re.escape(job_norm)
-    
-    # Arabic job context patterns
     arabic_patterns = [
-        rf"(?:وظيفه|وظيفة|طلب|تقدم|للوظيفة|للوظيفه|لشغل)\s*{escaped_job}",
-        rf"{escaped_job}\s*(?:وظيفه|وظيفة|مطلوب|ممكن|متاح)",
-        rf"(?:لدي|عندي|أبحث عن|ارغب في)\s*{escaped_job}"
+        rf"(?:وظيفه|وظيفة|تقدم|للوظيفة|للوظيفه|لشغل)\s*{escaped_job}",
+        rf"{escaped_job}\s*(?:وظيفه|وظيفة|مطلوب|متاح)",
+        rf"(?:عندي|أبحث عن|ارغب في)\s*{escaped_job}"
     ]
-    
-    # English job context patterns  
     english_patterns = [
-        rf"(?:job|position|role|application|apply for)\s*{escaped_job}",
-        rf"{escaped_job}\s*(?:job|position|role|vacancy|opening)",
-        rf"(?:looking for|interested in|apply for)\s*{escaped_job}"
+        rf"(?:job|position|role|apply for)\s*{escaped_job}",
+        rf"{escaped_job}\s*(?:job|position|role|vacancy)",
+        rf"(?:looking for|interested in)\s*{escaped_job}"
     ]
-
     flags = re.UNICODE | re.IGNORECASE
 
-    # Check Arabic patterns
-    for pattern in arabic_patterns:
+    for pattern in arabic_patterns + english_patterns:
         if re.search(pattern, text_norm, flags):
-            logger.info(f"✅ ARABIC CONTEXT MATCH: Found '{job_id}' with job context")
-            return True
-
-    # Check English patterns
-    for pattern in english_patterns:
-        if re.search(pattern, text_norm, flags):
-            logger.info(f"✅ ENGLISH CONTEXT MATCH: Found '{job_id}' with job context")
+            logger.info(f"✅ CONTEXT MATCH: '{job_id}' found with context")
             return True
 
     # --------------------------------------------------
-    # 4️⃣ Word boundary matching
+    # 3️⃣ Word boundary / partial match
     # --------------------------------------------------
-    word_boundary_pattern = rf"\b{re.escape(job_lower)}\b"
-    if re.search(word_boundary_pattern, text_lower, flags):
+    if re.search(rf"\b{re.escape(job_lower)}\b", text_lower, flags):
         logger.info(f"✅ WORD BOUNDARY MATCH: Found '{job_id}' as separate word")
         return True
 
     # --------------------------------------------------
-    # 5️⃣ Arabic word-based matching
+    # 4️⃣ Partial Arabic word overlap
     # --------------------------------------------------
-    arabic_words = re.findall(r'[\u0600-\u06FF]{2,}', job_norm)  # At least 2 Arabic characters
+    arabic_words = re.findall(r'[\u0600-\u06FF]{2,}', job_norm)
     if arabic_words:
         text_arabic_words = set(re.findall(r'[\u0600-\u06FF]{2,}', text_norm))
-        
-        # Check if all Arabic words from job_id are in text
-        found_all_words = all(word in text_arabic_words for word in arabic_words)
-        if found_all_words:
-            logger.info(f"✅ ARABIC WORDS MATCH: All Arabic words from '{job_id}' found in text")
-            return True
-        
-        # Check if majority of Arabic words are present
-        found_words = sum(1 for word in arabic_words if word in text_arabic_words)
-        if found_words >= len(arabic_words) * 0.7:  # 70% threshold
-            logger.info(f"✅ ARABIC PARTIAL MATCH: {found_words}/{len(arabic_words)} words from '{job_id}' found")
+        found = sum(1 for w in arabic_words if w in text_arabic_words)
+        if found >= len(arabic_words) * 0.7:
+            logger.info(f"✅ PARTIAL ARABIC MATCH: {found}/{len(arabic_words)} words found")
             return True
 
     # --------------------------------------------------
-    # 6️⃣ Common job title variations and abbreviations
+    # 5️⃣ Common job variations
     # --------------------------------------------------
-    common_variations = {
-        # Arabic variations
-        'مطور': ['مطور برامج', 'مبرمج', 'مطور ويب'],
-        'مبرمج': ['مطور', 'مطور برامج', 'مبرمج ويب'],
-        'مصمم': ['مصمم جرافيك', 'مصمم ويب'],
-        'مدير': ['مدير مشروع', 'مدير فريق'],
-        'مهندس': ['مهندس برمجيات', 'مهندس نظم'],
-        
-        # English variations
-        'developer': ['software developer', 'web developer'],
-        'programmer': ['developer', 'software programmer'],
-        'designer': ['graphic designer', 'web designer'],
-        'manager': ['project manager', 'team manager'],
-        'engineer': ['software engineer', 'systems engineer']
+    variations = {
+        'developer': ['software engineer', 'programmer', 'web developer'],
+        'programmer': ['developer', 'software engineer'],
+        'designer': ['graphic designer', 'ux designer'],
+        'manager': ['project manager', 'team lead'],
+        'engineer': ['systems engineer', 'developer'],
+        'مطور': ['مبرمج', 'مهندس برمجيات'],
+        'مهندس': ['مطور', 'مبرمج', 'مهندس نظم']
     }
-    
-    # Check for variations of the job_id
-    if job_lower in common_variations:
-        for variation in common_variations[job_lower]:
-            if variation.lower() in text_lower:
-                logger.info(f"✅ JOB VARIATION MATCH: Found variation '{variation}' for '{job_id}'")
+    if job_lower in variations:
+        for var in variations[job_lower]:
+            if var in text_lower:
+                logger.info(f"✅ VARIATION MATCH: Found '{var}' for '{job_id}'")
                 return True
 
     # --------------------------------------------------
-    # 7️⃣ Split and match for multi-word job titles
+    # 6️⃣ Word overlap for multi-word job titles
     # --------------------------------------------------
     job_words = job_lower.split()
     if len(job_words) > 1:
-        # Check if all words are present (order doesn't matter)
-        text_words_set = set(text_lower.split())
-        found_all = all(word in text_words_set for word in job_words)
-        if found_all:
-            logger.info(f"✅ MULTI-WORD MATCH: All words from '{job_id}' found in text")
-            return True
-        
-        # Check if majority of words are present
-        found_count = sum(1 for word in job_words if word in text_words_set)
-        if found_count >= len(job_words) * 0.7:  # 70% threshold
-            logger.info(f"✅ MULTI-WORD PARTIAL MATCH: {found_count}/{len(job_words)} words from '{job_id}' found")
+        text_words = text_lower.split()
+        match_ratio = sum(1 for w in job_words if w in text_words) / len(job_words)
+        if match_ratio >= 0.7:
+            logger.info(f"✅ MULTI-WORD PARTIAL MATCH: {match_ratio*100:.1f}% words found")
             return True
 
     # --------------------------------------------------
-    # 8️⃣ Remove common stop words and try again
+    # 7️⃣ LLM Semantic Understanding (OpenAI / Gemini)
     # --------------------------------------------------
-    stop_words = {'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'and', 'or', 'but', 'ال', 'في', 'على', 'إلى', 'من', 'و', 'أو'}
-    job_words_clean = [word for word in job_lower.split() if word not in stop_words and len(word) > 2]
-    
-    if job_words_clean:
-        text_words_clean = [word for word in text_lower.split() if word not in stop_words and len(word) > 2]
-        text_words_set_clean = set(text_words_clean)
-        
-        found_clean = all(word in text_words_set_clean for word in job_words_clean)
-        if found_clean:
-            logger.info(f"✅ CLEANED WORDS MATCH: Found '{job_id}' after removing stop words")
+    logger.info(f"🧠 Using LLM semantic matching for '{job_id}' ...")
+
+    provider = os.getenv("MODEL_TYPE", "Gemini").lower()
+    city_match = False
+
+    prompt = f"""
+    You are a smart job relevance detector.
+    Determine if this text refers to the job title "{job_id}" in a semantic sense.
+
+    Example:
+    - If job_id = "Software Engineer" and text mentions "Python developer", return YES.
+    - If job_id = "Marketing Manager" and text says "sales executive", return NO.
+
+    Text:
+    {text}
+
+    Respond ONLY with YES or NO.
+    """
+
+    try:
+        if provider == "Gemini":
+            genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+            model = genai.GenerativeModel("gemini-2.0-flash")
+            response = model.generate_content(prompt)
+            answer = response.text.strip().upper()
+        else:
+            client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a precise job title matcher."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0
+            )
+            answer = response.choices[0].message.content.strip().upper()
+
+        if "YES" in answer:
+            logger.info(f"✅ LLM SEMANTIC MATCH: {job_id}")
             return True
+        else:
+            logger.info(f"❌ LLM NO MATCH for '{job_id}'")
+
+    except Exception as e:
+        logger.warning(f"⚠️ LLM semantic match failed: {e}")
 
     # --------------------------------------------------
-    # Final fallback: Simple substring without context
+    # 8️⃣ Fallback
     # --------------------------------------------------
-    words_in_job = job_lower.split()
-    if len(words_in_job) == 1 and words_in_job[0] in text_lower:
-        logger.info(f"✅ SINGLE WORD FALLBACK: Found single word '{job_id}' in text")
-        return True
-
-    # --------------------------------------------------
-    # If everything fails
-    # --------------------------------------------------
-    logger.info(f"❌ NO MATCH FOUND for '{job_id}'")
+    logger.info(f"❌ NO MATCH FOUND for '{job_id}' after all methods")
     return False
 
 def node_ingest_gmail(state: PipelineState) -> PipelineState:
@@ -452,6 +456,7 @@ def node_ingest_forms(state: PipelineState) -> PipelineState:
 
     logger.info(f"✅ Form processing complete: {processed_count} candidates added")
     return state
+
 
 
 
