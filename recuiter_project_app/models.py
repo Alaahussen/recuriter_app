@@ -6,7 +6,7 @@ from config import get_job_config
 from datetime import datetime
 
 
-class Candidate(BaseModel)
+class Candidate(BaseModel):
     email: str
     name: Optional[str] = None
     city: Optional[str] = None
@@ -36,6 +36,7 @@ class PipelineState(BaseModel):
     drive_folder_id: Optional[str] = None
     sheet_id: Optional[str] = None
     calendar_id: Optional[str] = None
+
 
 
 
