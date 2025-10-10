@@ -1,7 +1,7 @@
 # streamlit_app.py
 __import__('pysqlite3')
-import s
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3'
 import streamlit as st
 import os
 import json
@@ -1299,6 +1299,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
