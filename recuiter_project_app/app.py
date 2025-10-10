@@ -723,7 +723,8 @@ class ATSApp:
                     
                     # تحديث رابط الاختبار
                     update_candidate_row_links(sheets, sheet_id, row_index, form_id, form_link, "")
-    
+                    
+            st.success(f"🎉 تم إرسال الاختبار بنجاح لـ {candidate.email}")
             return True, form_link
     
         except Exception as e:
@@ -1308,6 +1309,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
