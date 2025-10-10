@@ -797,109 +797,6 @@ class ATSApp:
             
             st.success("تم تسجيل الخروج بنجاح!")
             st.rerun()
-    def node_send_tests(self,state: PipelineState) -> Tuple[PipelineState, bool, dict]:
-        """
-        Sends technical tests to candidates via Google Forms and email.
-    
-        Returns:
-            (state, success_flag, form_links)
-            - success_flag (bool): True if at least one test was sent successfully.
-            - form_links (dict): {candidate_email: form_link} for successfully created tests.
-        """
-        config = get_job_config()
-        gmail, calendar, drive, sheets, forms = google_services()
-    
-        deadline = (datetime.now(UTC) + timedelta(days=2)).strftime('%Y-%m-%d')
-    
-        # generate test per role
-        quiz = llm_json(TEST_GEN_PROMPT.format(job_id=config['job_id']), expect_list=True) or []
-    
-        success_flag = False
-        form_links = {}
-    
-        for c in state.candidates:
-            if c.status != 'classified' or getattr(c, "form_id", None):
-                continue
-    
-            try:
-                # Step 1: Create a Google Form for this candidate
-                form_body = {
-                    "info": {
-                        "title": f"{config['job_title']} - Technical Quiz",
-                        "documentTitle": f"Quiz for {c.name or 'Candidate'}"
-                    }
-                }
-                form = forms.forms().create(body=form_body).execute()
-                form_id = form["formId"]
-    
-                # Step 2: Add questions to the form
-                requests = []
-                for i, q in enumerate(quiz):
-                    qtxt = q.get("question") if isinstance(q, dict) else str(q)
-                    opts = q.get("options", []) if isinstance(q, dict) else []
-    
-                    question_item = {
-                        "title": qtxt,
-                        "questionItem": {
-                            "question": {
-                                "required": True,
-                            }
-                        }
-                    }
-    
-                    if opts:  # Multiple-choice
-                        question_item["questionItem"]["question"]["choiceQuestion"] = {
-                            "type": "RADIO",
-                            "options": [{"value": o} for o in opts],
-                            "shuffle": True,
-                        }
-    
-                    requests.append({
-                        "createItem": {
-                            "item": question_item,
-                            "location": {"index": i}
-                        }
-                    })
-    
-                if requests:
-                    forms.forms().batchUpdate(formId=form_id, body={"requests": requests}).execute()
-    
-                # Step 3: Build form URL
-                form_link = f"https://docs.google.com/forms/d/{form_id}/viewform"
-    
-                # Step 4: Send email to candidate
-                body = config['templates']['test'].format(
-                    name=c.name or 'Candidate',
-                    test_link=form_link,
-                    deadline=deadline
-                )
-                _send_gmail_direct(gmail, c.email, f"{config['job_id']} - Technical Quiz", body)
-    
-                # Step 5: Store formId + quiz in candidate notes
-                c.status = 'test_sent'
-                c.form_id = form_id
-                c.notes = json.dumps({
-                    "form_id": form_id,
-                    "quiz": quiz
-                }, ensure_ascii=False)
-    
-                # Track success
-                form_links[c.email] = form_link
-                success_flag = True
-    
-                # Update the candidate row in the sheet
-                try:
-                    row_index = find_candidate_row_by_email(sheets, state.sheet_id, c.email)
-                    if row_index:
-                        update_candidate_row_links(sheets, state.sheet_id, row_index, form_id, form_link, "")
-                except Exception as e:
-                    logger.warning(f"Failed to update candidate row with form ID: {e}")
-    
-            except Exception as e:
-                logger.warning(f"Failed to send test to {c.email}: {e}")
-    
-        return state, success_flag, form_links
-
     def display_candidate_details(self, candidate: Candidate, state=None):
 
         config = get_job_config()
@@ -969,7 +866,7 @@ class ATSApp:
                 if st.button("📤 إرسال الاختبار إلى المرشح", key=f"send_test_{candidate.email}"):
                     with st.spinner("جاري إرسال الاختبار إلى المرشح..."):
                         try:
-                            state, success, links = self.node_send_tests(state)
+                            state, success, links =node_send_tests(state)
     
                             if success and candidate.email in links:
                                 form_link = links[candidate.email]
@@ -1313,6 +1210,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
