@@ -645,8 +645,8 @@ class ATSApp:
             quiz = llm_json(TEST_GEN_PROMPT.format(job_id=config['job_id']), expect_list=True) or []
         
             # Check if candidate is eligible for test
-            if candidate.status != 'classified' or getattr(candidate, 'form_id', None):
-                return False, ""
+            #if candidate.status != 'classified' or getattr(candidate, 'form_id', None):
+                #return False, ""
         
             # Step 1: Create a Google Form for this candidate
             form_body = {
@@ -1297,6 +1297,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
