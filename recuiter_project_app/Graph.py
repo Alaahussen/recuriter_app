@@ -41,9 +41,9 @@ def evaluate_cv_node(state: PipelineState) -> PipelineState:
 
         # --- Assign status ---
         if candidate.overall_score >= interview_threshold:
-            candidate.Final_evaluation = "Interview Step"
+            candidate.final_evaluation = "Interview Step"
         else:
-            candidate.Final_evaluation = "Under Threshold"
+            candidate.final_evaluation = "Under Threshold"
 
         print(f"✅ Evaluated {getattr(candidate, 'name', 'Unknown')}: "
               f"CV={candidate.cv_score}, Test={candidate.test_score}, "
@@ -59,7 +59,7 @@ def evaluate_cv_node(state: PipelineState) -> PipelineState:
                         spreadsheetId=state.sheet_id,
                         range=update_range,
                         valueInputOption="RAW",
-                        body={"values": [[candidate.Final_evaluation]]},
+                        body={"values": [[candidate.final_evaluation]]},
                     ).execute()
         except Exception as e:
             print(f"⚠️ Warning while updating Google Sheets for {candidate.email}: {e}")
@@ -71,7 +71,14 @@ def build_graph(evaluation_mode="تقييم السيرة الذاتية فقط")
     """
     Build ATS pipeline with poll_test_answers node (no send_tests node).
     """
-    gmail, calendar, drive, sheets, forms = google_services()
+    print("🏗️ Building graph with poll_test_answers...")
+    
+    try:
+        gmail, calendar, drive, sheets, forms = google_services()
+        print("✅ Google services initialized")
+    except Exception as e:
+        print(f"❌ Failed to initialize Google services: {e}")
+        return None
 
     g = StateGraph(PipelineState)
 
@@ -92,17 +99,13 @@ def build_graph(evaluation_mode="تقييم السيرة الذاتية فقط")
     g.add_edge("check_existing_candidates", "ingest_gmail")
     g.add_edge("ingest_gmail", "ingest_forms")
     g.add_edge("ingest_forms", "classify_and_score")
-
-    # ✅ Keep poll_test_answers for updating test results (no test sending)
     g.add_edge("classify_and_score", "poll_test_answers")
     g.add_edge("poll_test_answers", "evaluate_cv")
     g.add_edge("evaluate_cv", "compute_overall_and_store")
     g.add_edge("compute_overall_and_store", "generate_reports")
     g.add_edge("generate_reports", END)
 
-    # --- Apply environment config ---
-    os.environ["EVALUATION_MODE"] = evaluation_mode
-
+    print("✅ Graph built successfully")
     return g.compile()
 
 
