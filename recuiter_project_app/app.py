@@ -630,97 +630,97 @@ class ATSApp:
                 del st.session_state[key]
         # أيضًا إعادة تعيين قائمة المرشحين
         st.session_state.candidates = []
-        def node_send_tests(self, candidate: Candidate) -> Tuple[bool, str]:
-            """إرسال اختبار لمرشح واحد وإرجاع نجاح العملية ورابط النموذج"""
-            config = get_job_config()
-            gmail, calendar, drive, sheets, forms = google_services()
-        
-            deadline = (datetime.now(UTC) + timedelta(days=2)).strftime('%Y-%m-%d')
-        
-            # generate test per role
-            quiz = llm_json(TEST_GEN_PROMPT.format(job_id=config['job_id']), expect_list=True) or []
-        
-            # Check if candidate is eligible for test
-            if candidate.status != 'classified' or getattr(candidate, 'form_id', None):
-                return False, ""
-        
-            try:
-                # Step 1: Create a Google Form for this candidate
-                form_body = {
-                    "info": {
-                        "title": f"{config['job_title']} - Technical Quiz",
-                        "documentTitle": f"Quiz for {candidate.name or 'Candidate'}"
+    def node_send_tests(self, candidate: Candidate) -> Tuple[bool, str]:
+        """إرسال اختبار لمرشح واحد وإرجاع نجاح العملية ورابط النموذج"""
+        config = get_job_config()
+        gmail, calendar, drive, sheets, forms = google_services()
+    
+        deadline = (datetime.now(UTC) + timedelta(days=2)).strftime('%Y-%m-%d')
+    
+        # generate test per role
+        quiz = llm_json(TEST_GEN_PROMPT.format(job_id=config['job_id']), expect_list=True) or []
+    
+        # Check if candidate is eligible for test
+        if candidate.status != 'classified' or getattr(candidate, 'form_id', None):
+            return False, ""
+    
+        try:
+            # Step 1: Create a Google Form for this candidate
+            form_body = {
+                "info": {
+                    "title": f"{config['job_title']} - Technical Quiz",
+                    "documentTitle": f"Quiz for {candidate.name or 'Candidate'}"
+                }
+            }
+            form = forms.forms().create(body=form_body).execute()
+            form_id = form["formId"]
+    
+            # Step 2: Add questions to the form
+            requests = []
+            for i, q in enumerate(quiz):
+                qtxt = q.get("question") if isinstance(q, dict) else str(q)
+                opts = q.get("options", []) if isinstance(q, dict) else []
+    
+                question_item = {
+                    "title": qtxt,
+                    "questionItem": {
+                        "question": {
+                            "required": True,
+                        }
                     }
                 }
-                form = forms.forms().create(body=form_body).execute()
-                form_id = form["formId"]
-        
-                # Step 2: Add questions to the form
-                requests = []
-                for i, q in enumerate(quiz):
-                    qtxt = q.get("question") if isinstance(q, dict) else str(q)
-                    opts = q.get("options", []) if isinstance(q, dict) else []
-        
-                    question_item = {
-                        "title": qtxt,
-                        "questionItem": {
-                            "question": {
-                                "required": True,
-                            }
-                        }
+    
+                if opts:  # Multiple-choice
+                    question_item["questionItem"]["question"]["choiceQuestion"] = {
+                        "type": "RADIO",
+                        "options": [{"value": o} for o in opts],
+                        "shuffle": True,
                     }
-        
-                    if opts:  # Multiple-choice
-                        question_item["questionItem"]["question"]["choiceQuestion"] = {
-                            "type": "RADIO",
-                            "options": [{"value": o} for o in opts],
-                            "shuffle": True,
-                        }
-        
-                    requests.append({
-                        "createItem": {
-                            "item": question_item,
-                            "location": {"index": i}
-                        }
-                    })
-        
-                if requests:
-                    forms.forms().batchUpdate(formId=form_id, body={"requests": requests}).execute()
-        
-                # Step 3: Build form URL
-                form_link = f"https://docs.google.com/forms/d/{form_id}/viewform"
-        
-                # Step 4: Send email to candidate
-                body = config['templates']['test'].format(
-                    name=candidate.name or 'Candidate',
-                    test_link=form_link,
-                    deadline=deadline
-                )
-                _send_gmail_direct(gmail, candidate.email, f"{config['job_id']} - Technical Quiz", body)
-        
-                # Step 5: Store formId + quiz in candidate notes
-                candidate.status = 'test_sent'
-                candidate.form_id = form_id
-                candidate.notes = json.dumps({
-                    "form_id": form_id,
-                    "quiz": quiz
-                }, ensure_ascii=False)
-        
-                # Update the candidate row in the sheet
-                try:
-                    sheet_id = self.sheet_id or st.session_state.get('sheet_id')
-                    if sheet_id:
-                        row_index = find_candidate_row_by_email(sheets, sheet_id, candidate.email)
-                        if row_index:
-                            update_candidate_row_links(sheets, sheet_id, row_index, form_id, form_link, "")
-                except Exception as e:
-                    logger.warning(f"Failed to update candidate row with form ID: {e}")
-        
-                return True, form_link
-        
+    
+                requests.append({
+                    "createItem": {
+                        "item": question_item,
+                        "location": {"index": i}
+                    }
+                })
+    
+            if requests:
+                forms.forms().batchUpdate(formId=form_id, body={"requests": requests}).execute()
+    
+            # Step 3: Build form URL
+            form_link = f"https://docs.google.com/forms/d/{form_id}/viewform"
+    
+            # Step 4: Send email to candidate
+            body = config['templates']['test'].format(
+                name=candidate.name or 'Candidate',
+                test_link=form_link,
+                deadline=deadline
+            )
+            _send_gmail_direct(gmail, candidate.email, f"{config['job_id']} - Technical Quiz", body)
+    
+            # Step 5: Store formId + quiz in candidate notes
+            candidate.status = 'test_sent'
+            candidate.form_id = form_id
+            candidate.notes = json.dumps({
+                "form_id": form_id,
+                "quiz": quiz
+            }, ensure_ascii=False)
+    
+            # Update the candidate row in the sheet
+            try:
+                sheet_id = self.sheet_id or st.session_state.get('sheet_id')
+                if sheet_id:
+                    row_index = find_candidate_row_by_email(sheets, sheet_id, candidate.email)
+                    if row_index:
+                        update_candidate_row_links(sheets, sheet_id, row_index, form_id, form_link, "")
             except Exception as e:
-                logger.warning(f"Failed to send test to {candidate.email}: {e}")
-                return False, ""
+                logger.warning(f"Failed to update candidate row with form ID: {e}")
+    
+            return True, form_link
+    
+        except Exception as e:
+            logger.warning(f"Failed to send test to {candidate.email}: {e}")
+            return False, ""
     def regenerate_interview_questions(self, candidate: Candidate, mode: str = "both") -> bool:
         """إعادة إنشاء أسئلة المقابلة بناءً على الوضع المحدد (cv / job_requirements / both)."""
         try:
@@ -1299,6 +1299,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
