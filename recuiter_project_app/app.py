@@ -848,7 +848,7 @@ class ATSApp:
         interviewed = len([c for c in candidates if c.status == 'interview_scheduled'])
         rejected = len([c for c in candidates if c.status == 'rejected'])
         tested = len([c for c in candidates if c.status == 'tested'])
-        high_score = len([c for c in candidates if c.Final_evaluation=='Interview Step'])
+        high_score = len([c for c in candidates if c.final_evaluation=='Interview Step'])
         
         with col1:
             st.metric("إجمالي المرشحين", total_candidates)
@@ -1294,7 +1294,7 @@ def main():
                         "تقييم السيرة": candidate.cv_score or 0,
                         "نتيجة الاختبار": candidate.test_score or 0,
                         "التقييم النهائي": candidate.overall_score or 0,
-                        "الحالة النهائيه": candidate.Final_evaluation
+                        "الحالة النهائيه": candidate.final_evaluation
                     })
                 if status_data:
                     df = pd.DataFrame(status_data)
@@ -1327,6 +1327,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
