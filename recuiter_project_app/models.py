@@ -28,6 +28,7 @@ class Candidate(BaseModel):
     form_id: Optional[str] = None  # Add form_id field to store Google Form ID
     interview_email_sent: bool = False
     rejection_email_sent: bool = False
+    Final_evaluation: str=""
     
 class PipelineState(BaseModel):
     job_id: str = Field(default_factory=lambda: f"job_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
@@ -35,3 +36,4 @@ class PipelineState(BaseModel):
     drive_folder_id: Optional[str] = None
     sheet_id: Optional[str] = None
     calendar_id: Optional[str] = None
+
