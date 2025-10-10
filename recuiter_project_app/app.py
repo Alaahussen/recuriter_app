@@ -645,7 +645,7 @@ class ATSApp:
             deadline = (datetime.now() + timedelta(days=2)).strftime('%Y-%m-%d')
             
             # Step 1: Generate quiz
-            st.info("🔄 جاري إنشاء الأسئلة...")
+            #st.info("🔄 جاري إنشاء الأسئلة...")
             quiz = llm_json(TEST_GEN_PROMPT.format(job_id=config['job_id']), expect_list=True) or []
             
             if not quiz:
@@ -869,7 +869,8 @@ class ATSApp:
             'rejected': 'مرفوض',
             'accepted': 'مقبول',
             'test_sent': 'تم إرسال الاختبار',
-            'tested': 'تم إكمال الاختبار'
+            'tested': 'تم إكمال الاختبار',
+            'classified':'تم التصنيف'
         }
         return status_map.get(status, status)
 
@@ -1326,6 +1327,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
