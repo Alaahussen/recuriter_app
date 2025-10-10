@@ -82,7 +82,7 @@ def upsert_candidate_row(sheets, sheet_id: str, c: Candidate, drive_folder_link:
         c.overall_score if c.overall_score is not None else '', 
         c.status,
         c.notes or '',
-        c.Final_evaluation
+        c.final_evaluation
         
 
     ]
@@ -165,7 +165,7 @@ def get_candidate_from_sheet(sheets, sheet_id: str, email: str) -> Optional[Dict
             # --- Status ---
             'status': row[11] if len(row) > 11 else 'received',
             'notes': row[12] if len(row) > 12 else '',
-            'Final_evaluation':row[13] if len(row) > 13 else '',
+            'final_evaluation':row[13] if len(row) > 13 else '',
             'form_id': None
 
         }
@@ -282,7 +282,7 @@ def update_candidate_row(sheets, sheet_id: str, row_index: int, c: Candidate, dr
         c.overall_score if c.overall_score is not None else '', 
         c.status,
         c.notes or '',
-        c.Final_evaluation
+        c.final_evaluation
     ]
     sheets.spreadsheets().values().update(
         spreadsheetId=sheet_id, 
@@ -335,7 +335,7 @@ def node_check_existing_candidates(state: PipelineState) -> PipelineState:
                     test_score=candidate_data.get('test_score'),
                     overall_score=candidate_data.get('overall_score'),
                     notes=candidate_data.get('notes'),
-                    Final_evaluation=candidate_data.get('Final_evaluation'),
+                    final_evaluation=candidate_data.get('final_evaluation'),
                     form_id=candidate_data.get('form_id')
                 )
                 state.candidates.append(cand)
@@ -345,4 +345,5 @@ def node_check_existing_candidates(state: PipelineState) -> PipelineState:
         logger.warning(f"Failed to check existing candidates: {e}")
     
     return state
+
 
