@@ -956,7 +956,8 @@ class ATSApp:
                     with st.spinner("جاري إرسال الاختبار إلى المرشح..."):
                         try:
                             success, links =self.node_send_tests(candidate)
-    
+                            logger.info(success)
+                            logger.info(links)
                             if success and candidate.email in links:
                                 form_link = links[candidate.email]
                                 st.success(f"✅ تم إرسال الاختبار بنجاح إلى {candidate.name or candidate.email}!")
@@ -1299,6 +1300,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
