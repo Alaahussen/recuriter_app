@@ -10,7 +10,7 @@ from models import *
 from dotenv import load_dotenv
 import os
 
-load_dotenv(
+load_dotenv()
 
 
 def evaluate_cv_node(state: PipelineState) -> PipelineState:
@@ -107,6 +107,7 @@ def build_graph(evaluation_mode="تقييم السيرة الذاتية فقط")
 
     print("✅ Graph built successfully")
     return g.compile()
+
 
 
 
